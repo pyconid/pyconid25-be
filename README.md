@@ -14,6 +14,12 @@ BE for PyCon ID 2025 website
 - jalankan aplikasi `uvicorn main:app --reload`
 - buka openapi doc di http://localhost:8000/docs
 
+## Code Format
+`ruff format`
+
+## Static Analysis
+`ruff check`
+
 ## Testing
 - migrasi database lalu run semua testing `alembic upgrade head && pytest .`
 - run testing secara paralel `pytest -n auto .`
