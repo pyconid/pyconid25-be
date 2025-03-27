@@ -1,0 +1,5 @@
+env/
+**__pycache__**
+railway-token.txt
+docker-compose.yml
+.env
