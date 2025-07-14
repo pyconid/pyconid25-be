@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, MetaData
 from sqlalchemy.orm import sessionmaker, DeclarativeBase, Session as SqlalchemySession
 
 from settings import (
@@ -35,8 +35,13 @@ def get_db_sync_for_test(db: SqlalchemySession):
     return inner
 
 
+"""SQLAlchemy doesn't default to any schema, and PostgreSQL expects it.
+    This ensures all models are created in the `public` schema.
+"""
+
+
 class Base(DeclarativeBase):
-    pass
+    metadata = MetaData(schema="public")
 
 
 # define all model for alembic migration

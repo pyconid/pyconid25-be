@@ -63,6 +63,11 @@ def run_migrations_offline() -> None:
         context.run_migrations()
 
 
+
+"""SQLAlchemy doesn't default to any schema, and PostgreSQL expects it.
+    This ensures all models are created in the `public` schema.
+"""
+
 def run_migrations_online() -> None:
     """Run migrations in 'online' mode.
 
@@ -77,7 +82,9 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        context.configure(connection=connection, target_metadata=target_metadata)
+        context.configure(connection=connection, target_metadata=target_metadata, 
+        include_schemas=True,
+        version_table_schema="public",)
 
         with context.begin_transaction():
             context.run_migrations()

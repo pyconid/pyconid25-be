@@ -3,3 +3,8 @@ env/
 railway-token.txt
 docker-compose.yml
 .env
+
+# ignore uv related
+.python-version
+pyproject.toml
+uv.lock
