@@ -154,6 +154,68 @@ class TestAuth(IsolatedAsyncioTestCase):
             self.assertEqual(saved_account.access_token, "github_access_token_123")
             self.assertEqual(saved_account.provider, "github")
 
+    async def test_github_oauth_flow_old_account_change_email(self):
+        mock_user = User(
+            username="test@example.com",
+            password=generate_hash_password(""),
+            is_active=True,
+        )
+        self.db.add(mock_user)
+        self.db.flush()
+
+        mock_account = Account(
+            user_id=mock_user.id,
+            provider="github",
+            provider_id="12345",
+            provider_email="test@example.com",
+            provider_username="testuser",
+            provider_name="Test User",
+            access_token="github_access_token_123",
+            refresh_token="github_refresh_token_456",
+        )
+        self.db.add(mock_account)
+        self.db.flush()
+
+        mock_account.provider_email = "change_test@example.com"
+        self.db.commit()
+
+        app.dependency_overrides[get_db_sync] = get_db_sync_for_test(db=self.db)
+        client = TestClient(app)
+
+        with patch("core.oauth_service.OAuthService.handle_callback") as mock_callback:
+            mock_callback.return_value = {
+                "user": mock_user,
+                "account": mock_account,
+                "is_new_user": False,
+                "provider_user_info": {
+                    "id": "12345",
+                    "username": "testuser",
+                    "email": "change_test@example.com",
+                    "name": "Test User",
+                    "avatar_url": "https://github.com/avatar.png",
+                    "provider": "github",
+                },
+            }
+
+            response = client.get(
+                "/auth/github/callback/?code=auth_code&state=random_state",
+                follow_redirects=False,
+            )
+
+            self.assertEqual(response.status_code, 307)
+
+            redirect_url = response.headers.get("location", "")
+            self.assertIn("token=", redirect_url)
+            self.assertIn("refresh_token=", redirect_url)
+            self.assertIn("user_id=", redirect_url)
+            self.assertIn("is_new_user=false", redirect_url)
+
+            stmt = select(Account).where(Account.user_id == mock_user.id)
+            saved_account = self.db.execute(stmt).scalar()
+            self.assertIsNotNone(saved_account)
+            self.assertEqual(saved_account.user_id, mock_user.id)
+            self.assertEqual(saved_account.provider_email, "change_test@example.com")
+
     async def test_oauth_callback_error_handling(self):
         app.dependency_overrides[get_db_sync] = get_db_sync_for_test(db=self.db)
         client = TestClient(app)
