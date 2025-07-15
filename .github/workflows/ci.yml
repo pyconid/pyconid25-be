@@ -40,9 +40,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
       - name: Check code formatting with Ruff
-        run: ruff format
+        run: ruff format --check
       - name: Lint code with Ruff
-        run: ruff check
+        run: ruff check --exit-non-zero-on-fix
       - name: Test with pytest
         env:
           ENVIRONTMENT: os
