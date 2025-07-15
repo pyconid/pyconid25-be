@@ -1,6 +1,6 @@
 name: Formating, Linting and Testing Python package
 
-on: [push]
+on: [push, pull_request]
 
 jobs:
   build:
