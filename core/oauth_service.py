@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 import logging
+import traceback
 from typing import Optional, Tuple, TypedDict, Union
 from fastapi import HTTPException, Request
 
@@ -58,11 +59,12 @@ class OAuthService:
             redirect_uri = str(request.url_for("oauth_callback", provider=provider))
 
             if follow_redirect:
-                return await client.authorize_redirect(
-                    request, redirect_uri=redirect_uri
-                )
+                return await client.authorize_redirect(request, redirect_uri)
 
             authorization_url = await client.create_authorization_url(redirect_uri)
+            await client.save_authorize_data(
+                request, redirect_uri=redirect_uri, **authorization_url
+            )
 
             return authorization_url.get("url", None)
         except Exception:
@@ -79,11 +81,7 @@ class OAuthService:
             )
 
         try:
-            redirect_uri = str(request.url_for("oauth_callback", provider=provider))
-
-            token = await client.authorize_access_token(
-                request, redirect_uri=redirect_uri
-            )
+            token = await client.authorize_access_token(request)
 
             user_info = await OAuthService._get_user_info(client, token, provider)
 
@@ -99,6 +97,7 @@ class OAuthService:
             }
 
         except Exception as e:
+            traceback.print_exc()
             if isinstance(e, HTTPException):
                 raise e
             raise HTTPException(
@@ -209,15 +208,12 @@ class OAuthService:
     async def _get_github_user_info(
         client, token: OAuthTokenResponse
     ) -> UserInfoResponse:
-        user_response = await client.get(
-            f"{client.get('api_base_url', 'https://api.github.com')}/user", token=token
-        )
+        user_response = await client.get("https://api.github.com/user", token=token)
         user_data = user_response.json()
 
         # Get user emails
         emails_response = await client.get(
-            f"{client.get('api_base_url', 'https://api.github.com')}/user/emails",
-            token=token,
+            "https://api.github.com/user/emails", token=token
         )
         emails_data = (
             emails_response.json() if emails_response.status_code == 200 else []

@@ -21,6 +21,7 @@ class OAuthConfig:
                 authorize_url=f"{self.base_url_github}/login/oauth/authorize",
                 access_token_url=f"{self.base_url_github}/login/oauth/access_token",
                 userinfo_endpoint=f"{self.api_base_url_github}/user",
+                emails_endpoint=f"{self.api_base_url_github}/user/emails",
                 api_base_url=self.api_base_url_github,
             )
 

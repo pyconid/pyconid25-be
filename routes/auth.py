@@ -131,12 +131,6 @@ async def oauth_signin(
         return common_response(BadRequest(message=f"Provider {provider} not supported"))
 
     try:
-        # session_data = dict(http_request.session)
-        # print("=== OAuth Signin Debug ===")
-        # print(f"Session data: {session_data}")
-        # print(f"Session id: {http_request}")
-        # print(f"All session keys: {list(session_data.keys())}")
-        # print("==========================")
         authorization_url = await OAuthService.initiate_oauth(
             provider=provider,
             request=http_request,
@@ -184,34 +178,6 @@ async def oauth_callback(
         if not code:
             error_url = f"{FRONTEND_BASE_URL}/auth/github/callback?error=missing_code"
             return RedirectResponse(url=error_url)
-
-        # received_state = http_request.query_params.get("state")
-        # session_data = dict(http_request.session)
-
-        # print("=== OAuth Callback Debug ===")
-        # print(f"State: {state}")
-        # print(f"Received state: {received_state}")
-
-        # matching_state_key = None
-        # expected_state = None
-        # print(session_data)
-
-        # for key, value in session_data.items():
-        #     print(f"Key: {key}, Value: {value}")
-        #     if key.startswith(f"_state_{provider}_"):
-        #         session_state = key.split("_")[-1]  # Extract state dari key
-        #         print(f"Found session state in key: {key} -> state: {session_state}")
-
-        #         if session_state == received_state:
-        #             matching_state_key = key
-        #             expected_state = session_state
-        #             print("✅ State match found!")
-        #             break
-        #         else:
-        #             print(f"❌ State mismatch: {session_state} != {received_state}")
-
-        # print(f"Matching state key: {matching_state_key}")
-        # print("==========================")
 
         oauth_result = await OAuthService.handle_callback(
             provider=provider, request=http_request, db=db
