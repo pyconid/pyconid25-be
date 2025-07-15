@@ -22,3 +22,4 @@ class User(Base):
     # One to Many
     tokens = relationship("Token", back_populates="user")
     refresh_tokens = relationship("RefreshToken", back_populates="user")
+    accounts = relationship("Account", back_populates="user")
