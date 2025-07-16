@@ -48,4 +48,3 @@ class Base(DeclarativeBase):
 from models.User import User  # NOQA
 from models.Token import Token  # NOQA
 from models.RefreshToken import RefreshToken  # NOQA
-from models.Account import Account  # NOQA

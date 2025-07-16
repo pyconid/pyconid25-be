@@ -15,6 +15,12 @@ class User(Base):
     is_active: Mapped[bool] = mapped_column(
         "is_active", Boolean, nullable=True, default=False
     )
+    github_id: Mapped[str] = mapped_column(
+        "github_id", String(255), nullable=True, index=True
+    )
+    github_username: Mapped[str] = mapped_column(
+        "github_username", String(255), nullable=True
+    )
     created_at = mapped_column("created_at", DateTime(timezone=True))
     updated_at = mapped_column("updated_at", DateTime(timezone=True))
     deleted_at = mapped_column("deleted_at", DateTime(timezone=True))
@@ -22,4 +28,3 @@ class User(Base):
     # One to Many
     tokens = relationship("Token", back_populates="user")
     refresh_tokens = relationship("RefreshToken", back_populates="user")
-    accounts = relationship("Account", back_populates="user")

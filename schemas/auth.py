@@ -29,18 +29,15 @@ class OauthSignInRequest(BaseModel):
     follow_redirect: Optional[bool] = Field(Query(False, description="Follow redirect"))
 
 
-class OAuthSignInResponse(BaseModel):
+class GithubSignInResponse(BaseModel):
     redirect_url: str
 
 
-class OAuthCallbackResponse(BaseModel):
+class GithubVerifiedResponse(BaseModel):
     id: str
     username: str
     is_active: bool
     token: str
     refresh_token: str
     is_new_user: bool
-    provider: str
-    provider_username: Optional[str]
-    provider_email: Optional[str]
-    provider_name: Optional[str]
+    github_username: str
