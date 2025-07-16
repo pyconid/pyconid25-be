@@ -44,16 +44,3 @@ class OAuthCallbackResponse(BaseModel):
     provider_username: Optional[str]
     provider_email: Optional[str]
     provider_name: Optional[str]
-
-
-class GitHubVerifiedRequest(BaseModel):
-    github_cookie: str
-
-
-class GitHubVerifiedResponse(BaseModel):
-    id: str
-    github_username: str
-    token: str
-    refresh_token: str
-    username: str
-    is_active: bool

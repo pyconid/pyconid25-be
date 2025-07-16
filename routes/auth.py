@@ -1,6 +1,5 @@
 import traceback
 from typing import Optional
-from urllib.parse import urlencode
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
@@ -27,8 +26,6 @@ from schemas.common import (
     UnauthorizedResponse,
 )
 from schemas.auth import (
-    GitHubVerifiedRequest,
-    GitHubVerifiedResponse,
     LoginSuccessResponse,
     LoginRequest,
     MeResponse,
@@ -37,7 +34,6 @@ from schemas.auth import (
     OauthSignInRequest,
 )
 from repository import user as userRepo
-from settings import FRONTEND_BASE_URL
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
@@ -142,44 +138,33 @@ async def oauth_signin(
         return common_response(Ok(data={"redirect_url": authorization_url}))
     except HTTPException as e:
         return handle_http_exception(e)
-    except Exception:
+    except Exception as e:
         traceback.print_exc()
         return common_response(
-            InternalServerError(error=f"Failed to login via {provider}")
+            InternalServerError(error=f"Failed to initiate OAuth {provider}: {str(e)}")
         )
 
 
 @router.get(
-    "/{provider}/callback/",
-    name="oauth_callback",
+    "/{provider}/verified/",
     responses={
         "200": {"model": OAuthCallbackResponse},
-        "307": {
-            "description": "Redirect to frontend",
-            "content": {"text/html": {"example": "Redirecting..."}},
-        },
         "400": {"model": BadRequestResponse},
         "500": {"model": InternalServerErrorResponse},
     },
 )
-async def oauth_callback(
+async def oauth_verified(
     provider: str,
     http_request: Request,
     code: Optional[str] = None,
     state: Optional[str] = None,
-    error: Optional[str] = None,
     db: Session = Depends(get_db_sync),
 ):
     try:
-        if error:
-            error_url = f"{FRONTEND_BASE_URL}/auth/github/callback?error={error}"
-            return RedirectResponse(url=error_url)
-
         if not code:
-            error_url = f"{FRONTEND_BASE_URL}/auth/github/callback?error=missing_code"
-            return RedirectResponse(url=error_url)
+            return common_response(BadRequest(message="Code not found"))
 
-        oauth_result = await OAuthService.handle_callback(
+        oauth_result = await OAuthService.handle_verified(
             provider=provider, request=http_request, db=db
         )
 
@@ -189,7 +174,7 @@ async def oauth_callback(
 
         token, refresh_token = await generate_token_from_user(db=db, user=user)
 
-        params = {
+        response = {
             "token": token,
             "refresh_token": refresh_token,
             "user_id": str(user.id),
@@ -201,56 +186,13 @@ async def oauth_callback(
             "provider_name": account.provider_name,
         }
 
-        success_url = f"{FRONTEND_BASE_URL}/auth/github/callback?{urlencode(params)}"
-        return RedirectResponse(url=success_url)
-    except HTTPException as e:
-        error_url = f"{FRONTEND_BASE_URL}/auth/github/callback?error={str(e.detail)}"
-        return RedirectResponse(url=error_url)
-    except Exception:
-        traceback.print_exc()
-        error_url = (
-            f"{FRONTEND_BASE_URL}/auth/github/callback?error=authentication_failed"
-        )
-        return RedirectResponse(url=error_url)
-
-
-@router.post(
-    "/github/verified/",
-    responses={
-        "200": {"model": GitHubVerifiedResponse},
-        "400": {"model": BadRequestResponse},
-        "500": {"model": InternalServerErrorResponse},
-    },
-)
-async def github_verified(
-    request: GitHubVerifiedRequest, db: Session = Depends(get_db_sync)
-):
-    try:
-        github_result = await OAuthService.verify_github_cookie(
-            github_cookie=request.github_cookie, db=db
-        )
-
-        user = github_result["user"]
-        account = github_result["account"]
-
-        token, refresh_token = await generate_token_from_user(db=db, user=user)
-
-        return common_response(
-            Ok(
-                data={
-                    "id": str(user.id),
-                    "github_username": account.provider_username,
-                    "token": token,
-                    "refresh_token": refresh_token,
-                    "username": user.username,
-                    "is_active": user.is_active,
-                }
-            )
-        )
+        return common_response(Ok(data=response))
     except HTTPException as e:
         return handle_http_exception(e)
-    except Exception:
+    except Exception as e:
         traceback.print_exc()
         return common_response(
-            InternalServerError(error="Failed to verify github session")
+            InternalServerError(
+                error=f"Failed to handle OAuth verified {provider}: {str(e)}"
+            )
         )

@@ -1,11 +1,9 @@
 from datetime import datetime, timedelta
-import logging
 import traceback
 from typing import Optional, Tuple, TypedDict, Union
 from fastapi import HTTPException, Request
 
 from fastapi.responses import RedirectResponse
-import httpx
 import pytz
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -13,7 +11,7 @@ from core.oauth_config import oauth_config
 from core.security import generate_hash_password
 from models.Account import Account
 from models.User import User
-from settings import TZ
+from settings import FRONTEND_BASE_URL, TZ
 
 
 class UserInfoResponse(TypedDict):
@@ -55,8 +53,11 @@ class OAuthService:
                 status_code=400, detail=f"Provider {provider} not supported"
             )
 
+        if FRONTEND_BASE_URL is None:
+            raise HTTPException(status_code=500, detail="FRONTEND_BASE_URL is not set")
+
         try:
-            redirect_uri = str(request.url_for("oauth_callback", provider=provider))
+            redirect_uri = f"{FRONTEND_BASE_URL.rstrip('/')}/auth/{provider}/callback"
 
             if follow_redirect:
                 return await client.authorize_redirect(request, redirect_uri)
@@ -71,7 +72,7 @@ class OAuthService:
             raise HTTPException(status_code=500, detail="Failed to initiate OAuth")
 
     @staticmethod
-    async def handle_callback(
+    async def handle_verified(
         provider: str, request: Request, db: Session
     ) -> HandleOauthResponse:
         client = oauth_config.get_client(provider)
@@ -101,97 +102,9 @@ class OAuthService:
             if isinstance(e, HTTPException):
                 raise e
             raise HTTPException(
-                status_code=400, detail=f"OAuth authentication failed: {str(e)}"
+                status_code=400,
+                detail=f"OAuth verification for {provider} failed: {str(e)}",
             )
-
-    @staticmethod
-    async def verify_github_cookie(
-        github_cookie: str, db: Session
-    ) -> VerifyOauthSessionResponse:
-        try:
-            github_user_info = await OAuthService._verify_github_cookie_session(
-                github_cookie
-            )
-
-            if not github_user_info:
-                raise HTTPException(status_code=400, detail="Invalid GitHub session")
-
-            stmt = select(Account).where(
-                Account.provider == "github",
-                Account.provider_id == str(github_user_info["id"]),
-            )
-            existing_account = db.execute(stmt).scalar()
-
-            if existing_account is None:
-                raise HTTPException(status_code=400, detail="Account not found")
-
-            OAuthService._update_account_from_github_info(
-                existing_account, github_user_info
-            )
-            db.commit()
-
-            return {"user": existing_account.user, "account": existing_account}
-
-        except Exception as e:
-            if isinstance(e, HTTPException):
-                raise e
-            raise HTTPException(
-                status_code=400, detail="GitHub cookie verification failed"
-            )
-
-    @staticmethod
-    async def _verify_github_cookie_session(github_cookie: str) -> Optional[dict]:
-        try:
-            headers = {
-                "Cookie": f"user_session={github_cookie}",
-                "User-Agent": "PyConID-2025-App/1.0",
-                "Accept": "application/json",
-            }
-
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                response = await client.get(
-                    "https://api.github.com/user", headers=headers
-                )
-
-                if response.status_code != 200:
-                    return None
-
-                user_data = response.json()
-
-                try:
-                    emails_response = await client.get(
-                        "https://api.github.com/user/emails", headers=headers
-                    )
-
-                    if emails_response.status_code == 200:
-                        emails_data = emails_response.json()
-                        for email in emails_data:
-                            if email.get("primary", False) and email.get(
-                                "verified", False
-                            ):
-                                user_data["email"] = email.get("email")
-                                break
-                except Exception:
-                    pass
-
-                return user_data
-
-        except Exception as e:
-            logging.error(f"GitHub cookie verification failed: {e}")
-            return None
-
-    @staticmethod
-    def _update_account_from_github_info(account: Account, github_user_info: dict):
-        if github_user_info.get("email"):
-            account.provider_email = github_user_info.get("email")
-
-        if github_user_info.get("login"):
-            account.provider_username = github_user_info.get("login")
-
-        if github_user_info.get("name"):
-            account.provider_name = github_user_info.get("name")
-
-        account.updated_at = datetime.now(pytz.timezone(TZ))
 
     @staticmethod
     async def _get_user_info(

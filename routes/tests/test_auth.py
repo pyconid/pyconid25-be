@@ -1,8 +1,7 @@
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 import alembic.config
 from unittest import IsolatedAsyncioTestCase
 
-from fastapi import HTTPException
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from core.security import generate_hash_password
@@ -91,238 +90,12 @@ class TestAuth(IsolatedAsyncioTestCase):
         # Expect 5
         self.assertEqual(response.status_code, 401)
 
-    async def test_github_oauth_flow_new_user(self):
-        mock_user = User(
-            username="test@example.com",
-            password=generate_hash_password(""),
-            is_active=True,
-        )
-        self.db.add(mock_user)
-        self.db.flush()
-
-        mock_account = Account(
-            user_id=mock_user.id,
-            provider="github",
-            provider_id="12345",
-            provider_email="test@example.com",
-            provider_username="testuser",
-            provider_name="Test User",
-            access_token="github_access_token_123",
-            refresh_token="github_refresh_token_456",
-        )
-        self.db.add(mock_account)
-        self.db.commit()
-
-        app.dependency_overrides[get_db_sync] = get_db_sync_for_test(db=self.db)
-        client = TestClient(app)
-
-        with patch("core.oauth_service.OAuthService.handle_callback") as mock_callback:
-            mock_callback.return_value = {
-                "user": mock_user,
-                "account": mock_account,
-                "is_new_user": True,
-                "provider_user_info": {
-                    "id": "12345",
-                    "username": "testuser",
-                    "email": "test@example.com",
-                    "name": "Test User",
-                    "avatar_url": "https://github.com/avatar.png",
-                    "provider": "github",
-                },
-            }
-
-            response = client.get(
-                "/auth/github/callback/?code=auth_code&state=random_state",
-                follow_redirects=False,
-            )
-
-            self.assertEqual(response.status_code, 307)
-
-            redirect_url = response.headers.get("location", "")
-            self.assertIn("token=", redirect_url)
-            self.assertIn("refresh_token=", redirect_url)
-            self.assertIn("user_id=", redirect_url)
-            self.assertIn("is_new_user=true", redirect_url)
-
-            stmt = select(Token).where(Token.user_id == mock_user.id)
-            jwt_token = self.db.execute(stmt).scalar()
-            self.assertIsNotNone(jwt_token)
-
-            stmt = select(Account).where(Account.user_id == mock_user.id)
-            saved_account = self.db.execute(stmt).scalar()
-            self.assertIsNotNone(saved_account)
-            self.assertEqual(saved_account.access_token, "github_access_token_123")
-            self.assertEqual(saved_account.provider, "github")
-
-    async def test_github_oauth_flow_old_account_change_email(self):
-        mock_user = User(
-            username="test@example.com",
-            password=generate_hash_password(""),
-            is_active=True,
-        )
-        self.db.add(mock_user)
-        self.db.flush()
-
-        mock_account = Account(
-            user_id=mock_user.id,
-            provider="github",
-            provider_id="12345",
-            provider_email="test@example.com",
-            provider_username="testuser",
-            provider_name="Test User",
-            access_token="github_access_token_123",
-            refresh_token="github_refresh_token_456",
-        )
-        self.db.add(mock_account)
-        self.db.flush()
-
-        mock_account.provider_email = "change_test@example.com"
-        self.db.commit()
-
-        app.dependency_overrides[get_db_sync] = get_db_sync_for_test(db=self.db)
-        client = TestClient(app)
-
-        with patch("core.oauth_service.OAuthService.handle_callback") as mock_callback:
-            mock_callback.return_value = {
-                "user": mock_user,
-                "account": mock_account,
-                "is_new_user": False,
-                "provider_user_info": {
-                    "id": "12345",
-                    "username": "testuser",
-                    "email": "change_test@example.com",
-                    "name": "Test User",
-                    "avatar_url": "https://github.com/avatar.png",
-                    "provider": "github",
-                },
-            }
-
-            response = client.get(
-                "/auth/github/callback/?code=auth_code&state=random_state",
-                follow_redirects=False,
-            )
-
-            self.assertEqual(response.status_code, 307)
-
-            redirect_url = response.headers.get("location", "")
-            self.assertIn("token=", redirect_url)
-            self.assertIn("refresh_token=", redirect_url)
-            self.assertIn("user_id=", redirect_url)
-            self.assertIn("is_new_user=false", redirect_url)
-
-            stmt = select(Account).where(Account.user_id == mock_user.id)
-            saved_account = self.db.execute(stmt).scalar()
-            self.assertIsNotNone(saved_account)
-            self.assertEqual(saved_account.user_id, mock_user.id)
-            self.assertEqual(saved_account.provider_email, "change_test@example.com")
-
-    async def test_oauth_callback_error_handling(self):
-        app.dependency_overrides[get_db_sync] = get_db_sync_for_test(db=self.db)
-        client = TestClient(app)
-
-        response = client.get(
-            "/auth/github/callback/?error=access_denied", follow_redirects=False
-        )
-
-        self.assertEqual(response.status_code, 307)
-        redirect_url = response.headers.get("location", "")
-        self.assertIn("error=access_denied", redirect_url)
-
-        response = client.get("/auth/github/callback/", follow_redirects=False)
-
-        self.assertEqual(response.status_code, 307)
-        redirect_url = response.headers.get("location", "")
-        self.assertIn("error=missing_code", redirect_url)
-
-    async def test_github_verified_endpoint(self):
-        user = User(
-            username="existing@example.com",
-            password=generate_hash_password(""),
-            is_active=True,
-        )
-        self.db.add(user)
-        self.db.flush()
-
-        account = Account(
-            user_id=user.id,
-            provider="github",
-            provider_id="54321",
-            provider_email="existing@example.com",
-            provider_username="existinguser",
-            provider_name="Existing User",
-        )
-        self.db.add(account)
-        self.db.commit()
-
-        app.dependency_overrides[get_db_sync] = get_db_sync_for_test(db=self.db)
-        client = TestClient(app)
-
-        with patch(
-            "core.oauth_service.OAuthService.verify_github_cookie"
-        ) as mock_verify:
-            mock_verify.return_value = {"user": user, "account": account}
-
-            response = client.post(
-                "/auth/github/verified/", json={"github_cookie": "fake_github_cookie"}
-            )
-
-            self.assertEqual(response.status_code, 200)
-            data = response.json()
-
-            self.assertEqual(data["id"], str(user.id))
-            self.assertEqual(data["github_username"], "existinguser")
-            self.assertIn("token", data)
-            self.assertIn("refresh_token", data)
-            self.assertEqual(data["username"], user.username)
-            self.assertEqual(data["is_active"], user.is_active)
-
-    async def test_github_verified_invalid_cookie(self):
-        app.dependency_overrides[get_db_sync] = get_db_sync_for_test(db=self.db)
-        client = TestClient(app)
-
-        with patch(
-            "core.oauth_service.OAuthService.verify_github_cookie"
-        ) as mock_verify:
-            mock_verify.side_effect = HTTPException(
-                status_code=400, detail="Invalid GitHub session"
-            )
-
-            response = client.post(
-                "/auth/github/verified/", json={"github_cookie": "invalid_cookie"}
-            )
-
-            self.assertEqual(response.status_code, 400)
-            data = response.json()
-            self.assertEqual(data["message"], "Invalid GitHub session")
-
-    async def test_github_verified_account_not_found(self):
-        app.dependency_overrides[get_db_sync] = get_db_sync_for_test(db=self.db)
-        client = TestClient(app)
-
-        with patch(
-            "core.oauth_service.OAuthService.verify_github_cookie"
-        ) as mock_verify:
-            mock_verify.side_effect = HTTPException(
-                status_code=400, detail="Account not found"
-            )
-
-            response = client.post(
-                "/auth/github/verified/",
-                json={"github_cookie": "valid_cookie_but_no_account"},
-            )
-
-            self.assertEqual(response.status_code, 400)
-            data = response.json()
-            self.assertEqual(data["message"], "Account not found")
-
     async def test_oauth_signin_endpoint(self):
         app.dependency_overrides[get_db_sync] = get_db_sync_for_test(db=self.db)
         client = TestClient(app)
 
         with patch("core.oauth_service.OAuthService.initiate_oauth") as mock_initiate:
-            mock_initiate.return_value = (
-                "https://github.com/login/oauth/authorize?client_id=..."
-            )
+            mock_initiate.return_value = "https://github.com/login/oauth/authorize?client_id=test&redirect_uri=..."
 
             response = client.post("/auth/github/signin/")
 
@@ -330,6 +103,237 @@ class TestAuth(IsolatedAsyncioTestCase):
             data = response.json()
             self.assertIn("redirect_url", data)
             self.assertTrue(data["redirect_url"].startswith("https://github.com"))
+
+    async def test_oauth_verified_endpoint_new_user(self):
+        app.dependency_overrides[get_db_sync] = get_db_sync_for_test(db=self.db)
+        client = TestClient(app)
+
+        mock_client = MagicMock()
+
+        async def mock_authorize_access_token(request):
+            return {
+                "access_token": "github_access_token_123",
+                "refresh_token": "github_refresh_token_456",
+                "token_type": "bearer",
+                "scope": "user:email",
+            }
+
+        mock_client.authorize_access_token = mock_authorize_access_token
+
+        mock_user_response = MagicMock()
+        mock_user_response.json.return_value = {
+            "id": 12345,
+            "login": "testuser",
+            "email": "test@example.com",
+            "name": "Test User",
+        }
+
+        mock_emails_response = MagicMock()
+        mock_emails_response.status_code = 200
+        mock_emails_response.json.return_value = [
+            {"email": "test@example.com", "primary": True, "verified": True}
+        ]
+
+        async def mock_get(url, token=None):
+            if "user/emails" in url:
+                return mock_emails_response
+            return mock_user_response
+
+        mock_client.get = mock_get
+
+        with patch("core.oauth_config.oauth_config.get_client") as mock_get_client:
+            mock_get_client.return_value = mock_client
+
+            response = client.get(
+                "/auth/github/verified/?code=auth_code&state=random_state"
+            )
+
+            self.assertEqual(response.status_code, 200)
+            data = response.json()
+
+            self.assertIn("token", data)
+            self.assertIn("refresh_token", data)
+            self.assertIn("user_id", data)
+            self.assertEqual(data["username"], "test@example.com")
+            self.assertEqual(data["is_new_user"], "true")
+            self.assertEqual(data["provider"], "github")
+            self.assertEqual(data["provider_username"], "testuser")
+            self.assertEqual(data["provider_email"], "test@example.com")
+
+            stmt = select(User).where(User.username == "test@example.com")
+            created_user = self.db.execute(stmt).scalar()
+            self.assertIsNotNone(created_user)
+            self.assertTrue(created_user.is_active)
+
+            stmt = select(Account).where(Account.user_id == created_user.id)
+            created_account = self.db.execute(stmt).scalar()
+            self.assertIsNotNone(created_account)
+            self.assertEqual(created_account.provider, "github")
+            self.assertEqual(created_account.provider_id, "12345")
+            self.assertEqual(created_account.access_token, "github_access_token_123")
+
+    async def test_oauth_verified_endpoint_existing_user(self):
+        existing_user = User(
+            username="existing@example.com",
+            password=generate_hash_password(""),
+            is_active=True,
+        )
+        self.db.add(existing_user)
+        self.db.flush()
+
+        existing_account = Account(
+            user_id=existing_user.id,
+            provider="github",
+            provider_id="54321",
+            provider_email="existing@example.com",
+            provider_username="existinguser",
+            provider_name="Existing User",
+            access_token="old_token",
+            refresh_token="old_refresh",
+        )
+        self.db.add(existing_account)
+        self.db.commit()
+
+        app.dependency_overrides[get_db_sync] = get_db_sync_for_test(db=self.db)
+        client = TestClient(app)
+
+        mock_client = MagicMock()
+
+        async def mock_authorize_access_token(request):
+            return {
+                "access_token": "new_github_access_token",
+                "refresh_token": "new_github_refresh_token",
+                "token_type": "bearer",
+                "scope": "user:email",
+            }
+
+        mock_client.authorize_access_token = mock_authorize_access_token
+
+        mock_user_response = MagicMock()
+        mock_user_response.json.return_value = {
+            "id": 54321,
+            "login": "existinguser",
+            "email": "existing@example.com",
+            "name": "Updated Name",
+        }
+
+        mock_emails_response = MagicMock()
+        mock_emails_response.status_code = 200
+        mock_emails_response.json.return_value = [
+            {"email": "existing@example.com", "primary": True, "verified": True}
+        ]
+
+        async def mock_get(url, token=None):
+            if "user/emails" in url:
+                return mock_emails_response
+            return mock_user_response
+
+        mock_client.get = mock_get
+
+        with patch("core.oauth_config.oauth_config.get_client") as mock_get_client:
+            mock_get_client.return_value = mock_client
+
+            response = client.get(
+                "/auth/github/verified/?code=auth_code&state=random_state"
+            )
+
+            self.assertEqual(response.status_code, 200)
+            data = response.json()
+
+            self.assertIn("token", data)
+            self.assertIn("refresh_token", data)
+            self.assertEqual(data["user_id"], str(existing_user.id))
+            self.assertEqual(data["username"], "existing@example.com")
+            self.assertEqual(data["is_new_user"], "false")
+            self.assertEqual(data["provider"], "github")
+
+            stmt = select(Account).where(Account.user_id == existing_user.id)
+            updated_account = self.db.execute(stmt).scalar()
+            self.assertIsNotNone(updated_account)
+            self.assertEqual(updated_account.access_token, "new_github_access_token")
+            self.assertEqual(updated_account.provider_name, "Updated Name")
+
+    async def test_oauth_verified_missing_code(self):
+        app.dependency_overrides[get_db_sync] = get_db_sync_for_test(db=self.db)
+        client = TestClient(app)
+
+        response = client.get("/auth/github/verified/")
+
+        self.assertEqual(response.status_code, 400)
+        data = response.json()
+        self.assertEqual(data["message"], "Code not found")
+
+    async def test_oauth_verified_invalid_provider(self):
+        app.dependency_overrides[get_db_sync] = get_db_sync_for_test(db=self.db)
+        client = TestClient(app)
+
+        with patch("core.oauth_config.oauth_config.get_client") as mock_get_client:
+            mock_get_client.return_value = None
+
+            response = client.get(
+                "/auth/invalid_provider/verified/?code=auth_code&state=random_state"
+            )
+
+            self.assertEqual(response.status_code, 400)
+            data = response.json()
+            self.assertIn("not supported", data["message"])
+
+    async def test_oauth_verified_token_exchange_failure(self):
+        app.dependency_overrides[get_db_sync] = get_db_sync_for_test(db=self.db)
+        client = TestClient(app)
+
+        mock_client = MagicMock()
+
+        async def mock_authorize_access_token_fail(request):
+            raise Exception("Token exchange failed")
+
+        mock_client.authorize_access_token = mock_authorize_access_token_fail
+
+        with patch("core.oauth_config.oauth_config.get_client") as mock_get_client:
+            mock_get_client.return_value = mock_client
+
+            response = client.get(
+                "/auth/github/verified/?code=invalid_code&state=random_state"
+            )
+
+            self.assertEqual(response.status_code, 400)
+            data = response.json()
+            self.assertIn(
+                "OAuth verification for github failed: Token exchange failed",
+                str(data["message"]),
+            )
+
+    async def test_oauth_verified_user_info_fetch_failure(self):
+        app.dependency_overrides[get_db_sync] = get_db_sync_for_test(db=self.db)
+        client = TestClient(app)
+
+        mock_client = MagicMock()
+
+        async def mock_authorize_access_token(request):
+            return {"access_token": "github_access_token_123", "token_type": "bearer"}
+
+        mock_client.authorize_access_token = mock_authorize_access_token
+
+        async def mock_get_fail(url, token=None):
+            mock_response = MagicMock()
+            mock_response.json.side_effect = Exception("API Error")
+            return mock_response
+
+        mock_client.get = mock_get_fail
+
+        with patch("core.oauth_config.oauth_config.get_client") as mock_get_client:
+            mock_get_client.return_value = mock_client
+
+            response = client.get(
+                "/auth/github/verified/?code=auth_code&state=random_state"
+            )
+
+            self.assertEqual(response.status_code, 400)
+            data = response.json()
+            self.assertIn(
+                "OAuth verification for github failed: API Error",
+                str(data["message"]),
+            )
 
     def tearDown(self):
         self.db.close()
