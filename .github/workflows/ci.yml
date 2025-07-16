@@ -6,43 +6,47 @@ jobs:
   build:
     runs-on: ubuntu-latest
     services:
-      # Label used to access the service container
       postgres:
-        # Docker Hub image
         image: postgres
-        # Provide the password for postgres
         env:
           POSTGRES_PASSWORD: postgres
-        # Set health checks to wait until postgres has started
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
         ports:
-          # Maps tcp port 5432 on service container to the host
           - 5432:5432
+
     strategy:
       matrix:
         python-version: ["3.12"]
 
     steps:
       - uses: actions/checkout@v4
+
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      # You can test your matrix by printing the current Python version
+
+      - name: Install uv
+        run: |
+          curl -Ls https://astral.sh/uv/install.sh | bash
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
       - name: Display Python version
         run: python -c "import sys; print(sys.version)"
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+
+      - name: Install dependencies using uv
+        run: uv pip install -r requirements.txt
+
       - name: Check code formatting with Ruff
-        run: ruff format --check
+        run: uv run ruff format
+
       - name: Lint code with Ruff
-        run: ruff check --exit-non-zero-on-fix
+        run: uv run ruff check
+
       - name: Test with pytest
         env:
           ENVIRONTMENT: os
@@ -58,5 +62,5 @@ jobs:
           POSTGRES_DATABASE: postgres
           POSTGRES_USER: postgres
         run: |
-          alembic upgrade head
-          pytest . -n auto
+          uv run alembic upgrade head
+          uv run pytest . -n auto
