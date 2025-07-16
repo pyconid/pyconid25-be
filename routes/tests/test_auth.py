@@ -146,7 +146,7 @@ class TestAuth(IsolatedAsyncioTestCase):
         mock_oauth.github = mock_oauth_client
 
         with patch("core.oauth_github_service.oauth_github_service.oauth", mock_oauth):
-            response = client.get(
+            response = client.post(
                 "/auth/github/verified/?code=auth_code&state=random_state"
             )
 
@@ -218,7 +218,7 @@ class TestAuth(IsolatedAsyncioTestCase):
         mock_oauth.github = mock_oauth_client
 
         with patch("core.oauth_github_service.oauth_github_service.oauth", mock_oauth):
-            response = client.get(
+            response = client.post(
                 "/auth/github/verified/?code=auth_code&state=random_state"
             )
 
@@ -236,7 +236,7 @@ class TestAuth(IsolatedAsyncioTestCase):
         app.dependency_overrides[get_db_sync] = get_db_sync_for_test(db=self.db)
         client = TestClient(app)
 
-        response = client.get("/auth/github/verified/")
+        response = client.post("/auth/github/verified/")
 
         self.assertEqual(response.status_code, 400)
         data = response.json()
@@ -257,7 +257,7 @@ class TestAuth(IsolatedAsyncioTestCase):
         mock_oauth.github = mock_oauth_client
 
         with patch("core.oauth_github_service.oauth_github_service.oauth", mock_oauth):
-            response = client.get(
+            response = client.post(
                 "/auth/github/verified/?code=invalid_code&state=random_state"
             )
 
@@ -290,7 +290,7 @@ class TestAuth(IsolatedAsyncioTestCase):
         mock_oauth.github = mock_oauth_client
 
         with patch("core.oauth_github_service.oauth_github_service.oauth", mock_oauth):
-            response = client.get(
+            response = client.post(
                 "/auth/github/verified/?code=auth_code&state=random_state"
             )
 

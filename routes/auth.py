@@ -138,7 +138,7 @@ async def github_signin(http_request: Request, params: OauthSignInRequest = Depe
         )
 
 
-@router.get(
+@router.post(
     "/github/verified/",
     responses={
         "200": {"model": GithubVerifiedResponse},
