@@ -57,7 +57,7 @@ class OAuthService:
             raise HTTPException(status_code=500, detail="FRONTEND_BASE_URL is not set")
 
         try:
-            redirect_uri = f"{FRONTEND_BASE_URL.rstrip('/')}/auth/{provider}/callback"
+            redirect_uri = f"{FRONTEND_BASE_URL.rstrip('/')}/auth/{provider}/callback/"
 
             if follow_redirect:
                 return await client.authorize_redirect(request, redirect_uri)
