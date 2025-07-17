@@ -5,6 +5,10 @@ docker-compose.yml
 .env
 
 # ignore uv related
+.venv
 .python-version
 pyproject.toml
 uv.lock
+
+# Vscode
+.vscode

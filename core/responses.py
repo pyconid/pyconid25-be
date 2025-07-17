@@ -193,3 +193,22 @@ class InternalServerError(HttpResponseAbstract):
 
 def common_response(res: HttpResponseAbstract):
     return res.response()
+
+
+def handle_http_exception(e: HTTPException) -> JSONResponse:
+    if e.status_code == 400:
+        return common_response(BadRequest(message=e.detail))
+    elif e.status_code == 401:
+        return common_response(Unauthorized(message=e.detail))
+    elif e.status_code == 403:
+        return common_response(Forbidden(custom_response={"message": e.detail}))
+    elif e.status_code == 404:
+        return common_response(NotFound(message=e.detail))
+    elif e.status_code == 422:
+        return common_response(BadRequest(message=e.detail))
+    elif e.status_code >= 500:
+        return common_response(InternalServerError(error=e.detail))
+    else:
+        return common_response(
+            InternalServerError(error=f"Unexpected error: {e.detail}")
+        )
