@@ -11,7 +11,7 @@ class User(Base):
         "id", UUID(as_uuid=True), primary_key=True, index=True, default=uuid.uuid4
     )
     username: Mapped[str] = mapped_column("username", String, nullable=True)
-    password: Mapped[str] = mapped_column("password", String, nullable=False)
+    password: Mapped[str] = mapped_column("password", String, nullable=True)
     is_active: Mapped[bool] = mapped_column(
         "is_active", Boolean, nullable=True, default=False
     )
