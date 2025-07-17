@@ -6,7 +6,6 @@ from fastapi import HTTPException, Request
 from fastapi.responses import RedirectResponse
 import pytz
 from sqlalchemy import select
-from core.security import generate_hash_password
 from models.User import User
 from settings import FRONTEND_BASE_URL, TZ
 from authlib.integrations.starlette_client import OAuth
@@ -152,6 +151,9 @@ class OAuthGithubService:
         stmt = select(User).where(User.github_id == provider_id)
         existing_user = db.execute(stmt).scalar()
         if existing_user:
+            existing_user.github_username = user_info.get("username")
+            existing_user.updated_at = datetime.now(pytz.timezone(TZ))
+
             return existing_user, False
 
         user: Optional[User] = None
@@ -162,22 +164,25 @@ class OAuthGithubService:
         is_new_user = False
         if not user:
             user = User(
-                username=provider_email,
-                password=generate_hash_password(""),
+                username=user_info.get("username"),
+                password=None,
                 github_id=provider_id,
                 github_username=user_info.get("username"),
                 is_active=True,
+                created_at=datetime.now(pytz.timezone(TZ)),
+                updated_at=datetime.now(pytz.timezone(TZ)),
             )
             db.add(user)
             db.flush()
             is_new_user = True
 
-        if user_info.get("username") is not None:
-            user.github_username = user_info.get("username")
+        if not is_new_user:
+            if user_info.get("username") is not None:
+                user.github_username = user_info.get("username")
 
-        user.github_id = provider_id
-        user.updated_at = datetime.now(pytz.timezone(TZ))
-        db.add(user)
+            user.github_id = provider_id
+            user.updated_at = datetime.now(pytz.timezone(TZ))
+            db.add(user)
 
         db.commit()
 

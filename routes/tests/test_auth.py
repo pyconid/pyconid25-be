@@ -156,11 +156,11 @@ class TestAuth(IsolatedAsyncioTestCase):
             self.assertIn("token", data)
             self.assertIn("refresh_token", data)
             self.assertIn("user_id", data)
-            self.assertEqual(data["username"], "test@example.com")
+            self.assertEqual(data["username"], "testuser")
             self.assertTrue(data["is_new_user"])
             self.assertEqual(data["github_username"], "testuser")
 
-            stmt = select(User).where(User.username == "test@example.com")
+            stmt = select(User).where(User.username == "testuser")
             created_user = self.db.execute(stmt).scalar()
             self.assertIsNotNone(created_user)
             self.assertTrue(created_user.is_active)
