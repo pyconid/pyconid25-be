@@ -30,7 +30,8 @@ BE for PyCon ID 2025 website
 - run verbose (lihat print) `pytest . -s`
 
 ## Common issues
-Jika ada muncul kesalahan seperti ini
+### 1. Permission Denied For Schema Public Ketika Menjalankan Alembic
+Jika ada muncul kesalahan seperti ini ketika menjalankan alembic untuk pertama kalinya,
 ```
 sqlalchemy.exc.ProgrammingError: (psycopg.errors.InsufficientPrivilege) permission denied for schema public
 LINE 2: CREATE TABLE public.alembic_version (
@@ -42,9 +43,9 @@ CREATE TABLE public.alembic_version (
 )
 ```
 
-Solusinya adalah memberikan permission ke pada user yang bersangkutan ke schema public.
+solusinya adalah memberikan permission ke pada user yang bersangkutan ke schema public.
 
-Berikan akses schema public ke user.
+Berikan akses usage dan create schema public ke user.
 ```
 GRANT USAGE ON SCHEMA public TO user;
 GRANT CREATE ON SCHEMA public TO user;
