@@ -28,3 +28,10 @@ BE for PyCon ID 2025 website
 - run semua testing pada class tertentu `pytest ./{path}/{to}/{folder}/{file}.py::{nama class}`
 - run satu testing pada class tertentu `pytest ./{path}/{to}/{folder}/{file}.py::{nama class}::{nama fungsi}`
 - run verbose (lihat print) `pytest . -s`
+
+## Sign-in with google
+- Create a Project on Google Cloud
+- Create a clients on [Google Auth Platform](https://console.cloud.google.com/auth/clients)
+- Copy `Client ID` and `Client Secret` into `.env`
+- Set the HTTP origins that host your web application on `Authorised JavaScript origins`
+- Set callback End-Point on `Authorised redirect URIs` to get an access code from Google
