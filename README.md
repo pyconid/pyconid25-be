@@ -29,6 +29,9 @@ BE for PyCon ID 2025 website
 - run satu testing pada class tertentu `pytest ./{path}/{to}/{folder}/{file}.py::{nama class}::{nama fungsi}`
 - run verbose (lihat print) `pytest . -s`
 
+## Kontribusi
+untuk tata cara kontribusi bisa dilihat di [CONTRIBUTING.md](./CONTRIBUTING.md) dan diharapkan kontributor memematuhi [Code of Conduct](./CODE%20OF%20CONDUCT.md) yang berlaku.
+
 ## Common issues
 ### 1. Permission Denied For Schema Public Ketika Menjalankan Alembic
 Jika ada muncul kesalahan seperti ini ketika menjalankan alembic untuk pertama kalinya,
