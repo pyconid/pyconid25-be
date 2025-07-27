@@ -29,6 +29,9 @@ BE for PyCon ID 2025 website
 - run satu testing pada class tertentu `pytest ./{path}/{to}/{folder}/{file}.py::{nama class}::{nama fungsi}`
 - run verbose (lihat print) `pytest . -s`
 
+## Kontribusi
+untuk tata cara kontribusi bisa dilihat di [CONTRIBUTING.md](./CONTRIBUTING.md) dan diharapkan kontributor memematuhi [Code of Conduct](./CODE%20OF%20CONDUCT.md) yang berlaku.
+
 ## Sign-in with google
 - Create a Project on Google Cloud
 - Create a clients on [Google Auth Platform](https://console.cloud.google.com/auth/clients)
