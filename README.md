@@ -32,6 +32,13 @@ BE for PyCon ID 2025 website
 ## Kontribusi
 untuk tata cara kontribusi bisa dilihat di [CONTRIBUTING.md](./CONTRIBUTING.md) dan diharapkan kontributor memematuhi [Code of Conduct](./CODE%20OF%20CONDUCT.md) yang berlaku.
 
+## Sign-in with google
+- Create a Project on Google Cloud
+- Create a clients on [Google Auth Platform](https://console.cloud.google.com/auth/clients)
+- Copy `Client ID` and `Client Secret` into `.env`
+- Set the HTTP origins that host your web application on `Authorised JavaScript origins`
+- Set callback End-Point on `Authorised redirect URIs` to get an access code from Google
+
 ## Common issues
 ### 1. Permission Denied For Schema Public Ketika Menjalankan Alembic
 Jika ada muncul kesalahan seperti ini ketika menjalankan alembic untuk pertama kalinya,
