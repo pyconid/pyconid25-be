@@ -30,7 +30,7 @@ class OauthSignInRequest(BaseModel):
 
 
 class GithubSignInResponse(BaseModel):
-    redirect_url: str
+    redirect: str
 
 
 class GithubVerifiedResponse(BaseModel):
