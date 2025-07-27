@@ -11,9 +11,15 @@ class User(Base):
         "id", UUID(as_uuid=True), primary_key=True, index=True, default=uuid.uuid4
     )
     username: Mapped[str] = mapped_column("username", String, nullable=True)
-    password: Mapped[str] = mapped_column("password", String, nullable=False)
+    password: Mapped[str] = mapped_column("password", String, nullable=True)
     is_active: Mapped[bool] = mapped_column(
         "is_active", Boolean, nullable=True, default=False
+    )
+    github_id: Mapped[str] = mapped_column(
+        "github_id", String(255), nullable=True, index=True
+    )
+    github_username: Mapped[str] = mapped_column(
+        "github_username", String(255), nullable=True
     )
     created_at = mapped_column("created_at", DateTime(timezone=True))
     updated_at = mapped_column("updated_at", DateTime(timezone=True))

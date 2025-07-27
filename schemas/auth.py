@@ -1,4 +1,6 @@
-from pydantic import BaseModel
+from typing import Optional
+from fastapi import Query
+from pydantic import BaseModel, Field
 
 
 class LoginRequest(BaseModel):
@@ -21,3 +23,21 @@ class MeResponse(BaseModel):
 
 class LogoutSuccessResponse(BaseModel):
     message: str
+
+
+class OauthSignInRequest(BaseModel):
+    follow_redirect: Optional[bool] = Field(Query(False, description="Follow redirect"))
+
+
+class GithubSignInResponse(BaseModel):
+    redirect: str
+
+
+class GithubVerifiedResponse(BaseModel):
+    id: str
+    username: str
+    is_active: bool
+    token: str
+    refresh_token: str
+    is_new_user: bool
+    github_username: str
