@@ -128,7 +128,7 @@ async def github_signin(http_request: Request, params: OauthSignInRequest = Depe
 
         if isinstance(authorization_url, RedirectResponse):
             return authorization_url
-        return common_response(Ok(data={"redirect_url": authorization_url}))
+        return common_response(Ok(data={"redirect": authorization_url}))
     except HTTPException as e:
         return handle_http_exception(e)
     except Exception as e:
@@ -169,7 +169,7 @@ async def github_verified(
         response = {
             "token": token,
             "refresh_token": refresh_token,
-            "user_id": str(user.id),
+            "id": str(user.id),
             "username": user.username,
             "is_new_user": is_new_user,
             "github_username": provider_user_info.get("username"),

@@ -102,8 +102,8 @@ class TestAuth(IsolatedAsyncioTestCase):
 
             self.assertEqual(response.status_code, 200)
             data = response.json()
-            self.assertIn("redirect_url", data)
-            self.assertTrue(data["redirect_url"].startswith("https://github.com"))
+            self.assertIn("redirect", data)
+            self.assertTrue(data["redirect"].startswith("https://github.com"))
 
     async def test_oauth_verified_endpoint_new_user(self):
         app.dependency_overrides[get_db_sync] = get_db_sync_for_test(db=self.db)
@@ -155,7 +155,7 @@ class TestAuth(IsolatedAsyncioTestCase):
 
             self.assertIn("token", data)
             self.assertIn("refresh_token", data)
-            self.assertIn("user_id", data)
+            self.assertIn("id", data)
             self.assertEqual(data["username"], "testuser")
             self.assertTrue(data["is_new_user"])
             self.assertEqual(data["github_username"], "testuser")
@@ -227,7 +227,7 @@ class TestAuth(IsolatedAsyncioTestCase):
 
             self.assertIn("token", data)
             self.assertIn("refresh_token", data)
-            self.assertEqual(data["user_id"], str(existing_user.id))
+            self.assertEqual(data["id"], str(existing_user.id))
             self.assertEqual(data["username"], "existing@example.com")
             self.assertFalse(data["is_new_user"])
             self.assertEqual(data["github_username"], "existinguser")
