@@ -154,12 +154,6 @@ jobs:
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.DEV_SSH_KNOWN_HOSTS }}" >> ~/.ssh/known_hosts
-
-      - name: Debug file existence
-        run: |
-          ls -lah
-          ls -lah docker-compose.yaml
-          ls -lah version.txt
       
       - name: Copy docker-compose.yaml and version.txt to server
         uses: appleboy/scp-action@v0.1.7
@@ -168,9 +162,7 @@ jobs:
           username: ${{ secrets.DEV_SSH_USER }}
           port: ${{ secrets.DEV_SSH_PORT || '22' }}
           key: ${{ secrets.DEV_SSH_PRIVATE_KEY }}
-          source: |
-            docker-compose.yaml
-            version.txt
+          source: "docker-compose.yaml,version.txt"
           target: /home/${{ secrets.DEV_SSH_USER }}/pyconid25-be-dev/
           overwrite: true
 
