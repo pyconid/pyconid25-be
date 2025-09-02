@@ -91,17 +91,19 @@ jobs:
         if: github.ref == 'refs/heads/main'
         run: echo "${{ secrets.PROD_ENV_FILE }}" > .env
 
-      - name: Export variables from .env
+      - name: Load .env for build context (dev)
+        if: github.ref == 'refs/heads/dev'
+        run: echo "${{ secrets.DEV_ENV_FILE }}" > .env
+
+      - name: Load .env for build context (main/prod)
+        if: github.ref == 'refs/heads/main'
+        run: echo "${{ secrets.PROD_ENV_FILE }}" > .env
+
+      - name: Export variables and Build Docker image
         run: |
           set -a
           source .env
           set +a
-          env | grep GHCR_USERNAME
-          env | grep IMAGE_NAME
-          env | grep IMAGE_TAG
-
-      - name: Build Docker image
-        run: |
           docker build \
             -t ghcr.io/${GHCR_USERNAME}/${IMAGE_NAME}:${{ steps.version.outputs.version }} \
             -t ghcr.io/${GHCR_USERNAME}/${IMAGE_NAME}:latest \
@@ -109,11 +111,17 @@ jobs:
 
       - name: Push Docker image
         run: |
+          set -a
+          source .env
+          set +a
           docker push ghcr.io/${GHCR_USERNAME}/${IMAGE_NAME}:${{ steps.version.outputs.version }}
           docker push ghcr.io/${GHCR_USERNAME}/${IMAGE_NAME}:latest
 
       - name: Remove Docker image from Runner
         run: |
+          set -a
+          source .env
+          set +a
           docker rmi ghcr.io/${GHCR_USERNAME}/${IMAGE_NAME}:${{ steps.version.outputs.version }}
           docker rmi ghcr.io/${GHCR_USERNAME}/${IMAGE_NAME}:latest
 
