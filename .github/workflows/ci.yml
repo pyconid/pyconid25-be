@@ -90,9 +90,9 @@ jobs:
           set -a
           source .env
           set +a
-          echo "GHCR_USERNAME=$GHCR_USERNAME"
-          echo "IMAGE_NAME=$IMAGE_NAME"
-          echo "IMAGE_TAG=$IMAGE_TAG"
+          env | grep GHCR_USERNAME
+          env | grep IMAGE_NAME
+          env | grep IMAGE_TAG
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
