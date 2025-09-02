@@ -34,6 +34,7 @@ async def hello():
     logger.info("hello")
     return {"Hello": "from pyconid 2025 BE"}
 
+
 @app.get("/health")
 def health():
     return {"status": "ok"}
