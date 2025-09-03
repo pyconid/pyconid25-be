@@ -1,7 +1,6 @@
 env/
 **__pycache__**
 railway-token.txt
-docker-compose.yml
 .env
 
 # ignore uv related
@@ -12,3 +11,4 @@ uv.lock
 
 # Vscode
 .vscode
+.ruff_cache
