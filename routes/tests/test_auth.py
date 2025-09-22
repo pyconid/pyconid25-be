@@ -284,6 +284,7 @@ class TestAuth(IsolatedAsyncioTestCase):
 
         async def mock_get_fail(url, token=None):
             mock_response = MagicMock()
+            mock_response.status_code = 400
             mock_response.json.side_effect = Exception("API Error")
             return mock_response
 
