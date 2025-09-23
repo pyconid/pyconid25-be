@@ -195,7 +195,7 @@ class BaseOAuthService(ABC):
 
         if not user:
             user_data = {
-                "username": provider_username,
+                "username": provider_email if provider_email else provider_username,
                 "password": None,
                 "is_active": True,
                 "created_at": datetime.now(pytz.timezone(TZ)),
