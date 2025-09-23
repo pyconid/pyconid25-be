@@ -3,7 +3,7 @@ name: CI/CD Pipeline
 on: 
   push:
     branches: [main, dev]
-  workflow_dispatch: 
+  workflow_dispatch: {}
 
 jobs:
   format-lint-test:
@@ -43,7 +43,7 @@ jobs:
         run: ruff check --exit-non-zero-on-fix
       - name: Test with pytest
         env:
-          ENVIRONTMENT: os
+          ENVIRONMENT: os
           CORS_ALLOWED_ORIGINS: http://127.0.0.1/,https://www.google.com/,https://fastapi.tiangolo.com/
           SECRET_KEY: githubtest
           ALGORITHM: HS256
@@ -82,21 +82,13 @@ jobs:
       - name: Log in to GHCR
         run: echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USERNAME }}" --password-stdin
 
-      # Load .env dari secret sesuai branch
+      # Load .env sesuai branch
       - name: Load .env for build context (dev)
-        if: github.ref == 'refs/heads/dev'
+        if: ${{ github.ref_name == 'dev' }}
         run: echo "${{ secrets.DEV_ENV_FILE }}" > .env
 
       - name: Load .env for build context (main/prod)
-        if: github.ref == 'refs/heads/main'
-        run: echo "${{ secrets.PROD_ENV_FILE }}" > .env
-
-      - name: Load .env for build context (dev)
-        if: github.ref == 'refs/heads/dev'
-        run: echo "${{ secrets.DEV_ENV_FILE }}" > .env
-
-      - name: Load .env for build context (main/prod)
-        if: github.ref == 'refs/heads/main'
+        if: ${{ github.ref_name == 'main' }}
         run: echo "${{ secrets.PROD_ENV_FILE }}" > .env
 
       - name: Export variables and Build Docker image
@@ -117,22 +109,13 @@ jobs:
           docker push ghcr.io/${GHCR_USERNAME}/${IMAGE_NAME}:${{ steps.version.outputs.version }}
           docker push ghcr.io/${GHCR_USERNAME}/${IMAGE_NAME}:latest
 
-      - name: Remove Docker image from Runner
-        run: |
-          set -a
-          source .env
-          set +a
-          docker rmi ghcr.io/${GHCR_USERNAME}/${IMAGE_NAME}:${{ steps.version.outputs.version }}
-          docker rmi ghcr.io/${GHCR_USERNAME}/${IMAGE_NAME}:latest
-
       - name: Logout Docker
-        run: |
-          docker logout ghcr.io
+        run: docker logout ghcr.io
 
   deploy-dev:
     name: Deploy to Development
     needs: [docker-build]
-    if: github.ref == 'refs/heads/dev' && github.event_name == 'push'
+    if: ${{ github.ref_name == 'dev' }}
     runs-on: ubuntu-latest
     environment:
       name: development
@@ -196,7 +179,7 @@ jobs:
   deploy-prod:
     name: Deploy to Production
     needs: [docker-build]
-    if: (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) && github.event_name == 'push'
+    if: ${{ github.ref_name == 'main' || startsWith(github.ref, 'refs/tags/v') }}
     runs-on: ubuntu-latest
     environment:
       name: production
