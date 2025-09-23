@@ -109,11 +109,6 @@ jobs:
           docker push ghcr.io/${GHCR_USERNAME}/${IMAGE_NAME}:${{ steps.version.outputs.version }}
           docker push ghcr.io/${GHCR_USERNAME}/${IMAGE_NAME}:latest
 
-      - name: Remove Docker image from Runner
-        run: |
-          docker rmi ghcr.io/${GHCR_USERNAME}/${IMAGE_NAME}:${{ steps.version.outputs.version }}
-          docker rmi ghcr.io/${GHCR_USERNAME}/${IMAGE_NAME}:latest
-
       - name: Logout Docker
         run: docker logout ghcr.io
 
