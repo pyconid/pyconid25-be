@@ -3,6 +3,7 @@ name: CI/CD Pipeline
 on: 
   push:
     branches: [main, dev]
+  pull_request:
   workflow_dispatch: {}
 
 jobs:
@@ -62,6 +63,8 @@ jobs:
   docker-build:
     name: Build Docker Image
     needs: format-lint-test
+    # Hanya build Docker image saat push, bukan saat PR
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     env:
       REGISTRY: ghcr.io
