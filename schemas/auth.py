@@ -41,3 +41,17 @@ class GithubVerifiedResponse(BaseModel):
     refresh_token: str
     is_new_user: bool
     github_username: str
+
+
+class GoogleSignInResponse(BaseModel):
+    redirect: str
+
+
+class GoogleVerifiedResponse(BaseModel):
+    id: str
+    username: str
+    is_active: bool
+    token: str
+    refresh_token: str
+    is_new_user: bool
+    google_email: str
