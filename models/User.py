@@ -21,6 +21,12 @@ class User(Base):
     github_username: Mapped[str] = mapped_column(
         "github_username", String(255), nullable=True
     )
+    google_id: Mapped[str] = mapped_column(
+        "google_id", String(255), nullable=True, index=True
+    )
+    google_email: Mapped[str] = mapped_column(
+        "google_email", String(255), nullable=True
+    )
     created_at = mapped_column("created_at", DateTime(timezone=True))
     updated_at = mapped_column("updated_at", DateTime(timezone=True))
     deleted_at = mapped_column("deleted_at", DateTime(timezone=True))
