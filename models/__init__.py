@@ -1,6 +1,7 @@
 from sqlalchemy import create_engine, MetaData
 from sqlalchemy.orm import sessionmaker, DeclarativeBase, Session as SqlalchemySession
 
+
 from settings import (
     POSTGRES_DATABASE,
     POSTGRES_HOST,
