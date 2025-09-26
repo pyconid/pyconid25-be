@@ -5,9 +5,11 @@ from main import app
 import alembic.config
 import uuid
 
+
 def setup_module(module):
     alembic_args = ["upgrade", "head"]
     alembic.config.main(argv=alembic_args)
+
 
 def test_list_ticket():
     connection = engine.connect()
