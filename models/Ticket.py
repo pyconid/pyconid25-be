@@ -17,3 +17,4 @@ class Ticket(Base):
     )
     is_sold_out: Mapped[bool] = mapped_column("is_sold_out", Boolean, default=False)
     is_active: Mapped[bool] = mapped_column("is_active", Boolean, default=True)
+    description: Mapped[str] = mapped_column("description", String, nullable=True)

@@ -7,3 +7,4 @@ class TicketResponse(BaseModel):
     price: int
     user_participant_type: str
     is_sold_out: bool
+    description: str | None = None
