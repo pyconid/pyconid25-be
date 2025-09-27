@@ -17,6 +17,7 @@ def list_ticket(db: Session = Depends(get_db_sync)):
             price=t.price,
             user_participant_type=t.user_participant_type,
             is_sold_out=t.is_sold_out,
+            description=t.description,
         )
         for t in tickets
     ]

@@ -23,6 +23,7 @@ def test_list_ticket():
         user_participant_type="In Person",
         is_sold_out=False,
         is_active=True,
+        description="Ini deskripsi test ticket",
     )
     session.add(ticket)
     session.commit()
@@ -35,7 +36,12 @@ def test_list_ticket():
     assert response.status_code == 200
     data = response.json()
     assert "results" in data
-    assert any(t["name"] == "Test Ticket" for t in data["results"])
+    # Cek nama dan description
+    assert any(
+        t["name"] == "Test Ticket"
+        and t.get("description") == "Ini deskripsi test ticket"
+        for t in data["results"]
+    )
 
     # Cleanup
     session.close()
