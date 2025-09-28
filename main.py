@@ -1,8 +1,12 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
+from pydantic import ValidationError
 from core.health_check import health_check
 from core.log import logger
 from routes.auth import router as auth_router
+from routes.user_profile import router as user_profile_router
 from starlette.middleware.sessions import SessionMiddleware
 
 from settings import SECRET_KEY
@@ -27,6 +31,27 @@ app.add_middleware(
 )
 
 app.include_router(auth_router)
+app.include_router(user_profile_router)
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+
+@app.exception_handler(ValidationError)
+async def pydantic_validation_exception_handler(request: Request, exc: ValidationError):
+    # Logikanya hampir sama, hanya cara mengambil detail errornya sedikit berbeda
+    error_details = []
+    # exc.errors() dari pydantic.ValidationError sedikit berbeda strukturnya
+    for error in exc.errors():
+        field = error["loc"][0] if error["loc"] else "general"
+        message = error["msg"]
+        error_details.append({"field": field, "message": message})
+
+    return JSONResponse(
+        status_code=422,
+        content={
+            "message": "Terjadi kesalahan validasi pada data form (Pydantic validation).",
+            "errors": error_details,
+        },
+    )
 
 
 @app.get("/")
