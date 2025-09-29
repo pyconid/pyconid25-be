@@ -1,7 +1,6 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from fastapi.staticfiles import StaticFiles
 from pydantic import ValidationError
 from core.health_check import health_check
 from core.log import logger
@@ -32,7 +31,6 @@ app.add_middleware(
 
 app.include_router(auth_router)
 app.include_router(user_profile_router)
-app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
 @app.exception_handler(ValidationError)

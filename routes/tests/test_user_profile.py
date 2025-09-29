@@ -10,7 +10,6 @@ from models.User import User
 from main import app
 from schemas.user_profile import (
     JobCategory,
-    UserProfileBase,
     UserProfileCreate,
     UserProfileDB,
 )
@@ -111,133 +110,14 @@ class TestUserProfile(IsolatedAsyncioTestCase):
         token = response.json().get("token", None)
 
         # When 1
-        response = client.get("/user-profile/testuser")
+        response = client.get("/user-profile")
         # Expect 1
         # asser public profile checked
-        self.assertEqual(response.status_code, 200)
-        self.assertNotIn("experience", response.json())
-        self.assertNotIn("industry_categories", response.json())
-        self.assertNotIn("gender", response.json())
-        self.assertNotIn("city", response.json())
-        self.assertNotIn("zip_code", response.json())
-        self.assertNotIn("address", response.json())
-        self.assertNotIn("date_of_birth", response.json())
-        self.assertNotIn("t_shirt_size", response.json())
-        self.assertNotIn("email", response.json())
-        self.assertNotIn("phone", response.json())
-        self.assertNotIn("github_username", response.json())
-        self.assertNotIn("linkedin_url", response.json())
-        self.assertNotIn("is_active", response.json())
-        self.assertNotIn("created_at", response.json())
-        self.assertNotIn("updated_at", response.json())
-        self.assertNotIn("interest", response.json())
-        self.assertIn("profile_picture", response.json())
-        self.assertIn("first_name", response.json())
-        self.assertIn("last_name", response.json())
-        self.assertIn("job_category", response.json())
-        self.assertIn("job_title", response.json())
-        self.assertIn("country", response.json())
-        self.assertIn("bio", response.json())
-        self.assertIn("participant_type", response.json())
-        self.assertIn("coc_acknowledged", response.json())
-        self.assertIn("terms_agreed", response.json())
-        self.assertIn("privacy_agreed", response.json())
+        self.assertEqual(response.status_code, 401)
 
         # When 2
         response = client.get(
-            "/user-profile/testuser", headers={"Authorization": f"Bearer {token}"}
-        )
-        # Expect 2
-        self.assertEqual(response.status_code, 200)
-        self.assertIn("experience", response.json())
-        self.assertIn("industry_categories", response.json())
-        self.assertIn("gender", response.json())
-        self.assertIn("city", response.json())
-        self.assertIn("zip_code", response.json())
-        self.assertIn("address", response.json())
-        self.assertIn("date_of_birth", response.json())
-        self.assertIn("t_shirt_size", response.json())
-        self.assertIn("email", response.json())
-        self.assertIn("phone", response.json())
-        self.assertIn("github_username", response.json())
-        self.assertIn("linkedin_username", response.json())
-        self.assertIn("twitter_username", response.json())
-        self.assertIn("facebook_username", response.json())
-        self.assertNotIn("is_active", response.json())
-        self.assertNotIn("created_at", response.json())
-        self.assertNotIn("updated_at", response.json())
-        self.assertIn("interest", response.json())
-        self.assertIn("profile_picture", response.json())
-        self.assertIn("first_name", response.json())
-        self.assertIn("last_name", response.json())
-        self.assertIn("job_category", response.json())
-        self.assertIn("job_title", response.json())
-        self.assertIn("country", response.json())
-        self.assertIn("bio", response.json())
-        self.assertIn("participant_type", response.json())
-        self.assertIn("coc_acknowledged", response.json())
-        self.assertIn("terms_agreed", response.json())
-        self.assertIn("privacy_agreed", response.json())
-
-    async def test_get_user_diffferent_profile(self):
-        # Given
-        new_user = User(
-            username="testuser1",
-            password=generate_hash_password("password"),
-            is_active=True,
-        )
-        self.db.add(new_user)
-        self.db.commit()
-        new_user = User(
-            username="testuser2",
-            password=generate_hash_password("password"),
-            is_active=True,
-        )
-        self.db.add(new_user)
-        self.db.commit()
-        app.dependency_overrides[get_db_sync] = get_db_sync_for_test(db=self.db)
-        client = TestClient(app)
-        response = client.post(
-            "/auth/login/", json={"username": "testuser1", "password": "password"}
-        )
-        token = response.json().get("token", None)
-
-        # When 1
-        response = client.get("/user-profile/testuser2")
-        # Expect 1
-        # asser public profile checked
-        self.assertEqual(response.status_code, 200)
-        self.assertNotIn("experience", response.json())
-        self.assertNotIn("industry_categories", response.json())
-        self.assertNotIn("gender", response.json())
-        self.assertNotIn("city", response.json())
-        self.assertNotIn("zip_code", response.json())
-        self.assertNotIn("address", response.json())
-        self.assertNotIn("date_of_birth", response.json())
-        self.assertNotIn("t_shirt_size", response.json())
-        self.assertNotIn("email", response.json())
-        self.assertNotIn("phone", response.json())
-        self.assertNotIn("github_username", response.json())
-        self.assertNotIn("linkedin_url", response.json())
-        self.assertNotIn("is_active", response.json())
-        self.assertNotIn("created_at", response.json())
-        self.assertNotIn("updated_at", response.json())
-        self.assertNotIn("interest", response.json())
-        self.assertIn("profile_picture", response.json())
-        self.assertIn("first_name", response.json())
-        self.assertIn("last_name", response.json())
-        self.assertIn("job_category", response.json())
-        self.assertIn("job_title", response.json())
-        self.assertIn("country", response.json())
-        self.assertIn("bio", response.json())
-        self.assertIn("participant_type", response.json())
-        self.assertIn("coc_acknowledged", response.json())
-        self.assertIn("terms_agreed", response.json())
-        self.assertIn("privacy_agreed", response.json())
-
-        # When 2
-        response = client.get(
-            "/user-profile/testuser1", headers={"Authorization": f"Bearer {token}"}
+            "/user-profile", headers={"Authorization": f"Bearer {token}"}
         )
         # Expect 2
         self.assertEqual(response.status_code, 200)
@@ -305,20 +185,20 @@ class TestUserProfileBase(IsolatedAsyncioTestCase):
     async def test_valid_data_parses_correctly(self):
         """Tes Happy Path: Memastikan data yang sepenuhnya valid berhasil di-parse."""
         try:
-            model = UserProfileBase(**self.valid_data)
+            model = UserProfileCreate(**self.valid_data)
             self.assertEqual(model.first_name, "Budi")
             self.assertEqual(model.phone, "+6281234567890")
             # Cek validator tags
             self.assertEqual(model.interest, ["python", "fastapi", "testing"])
         except ValidationError as e:
-            self.fail(f"UserProfileBase raised ValidationError unexpectedly! \n{e}")
+            self.fail(f"UserProfileCreate raised ValidationError unexpectedly! \n{e}")
 
     async def test_missing_required_field_raises_error(self):
         """Tes Validasi Wajib: Memastikan error jika field wajib (first_name) hilang."""
         data = self.valid_data.copy()
         del data["first_name"]
         with self.assertRaises(ValidationError) as context:
-            UserProfileBase(**data)
+            UserProfileCreate(**data)
         # Cek apakah error yang muncul benar untuk field 'first_name'
         self.assertIn("first_name", str(context.exception))
 
@@ -330,13 +210,13 @@ class TestUserProfileBase(IsolatedAsyncioTestCase):
         with self.assertRaises(
             ValidationError, msg="Bio should be at least 10 characters"
         ):
-            UserProfileBase(**data)
+            UserProfileCreate(**data)
 
         # Kasus 2: Experience bernilai negatif
         data = self.valid_data.copy()
         data["experience"] = -1
         with self.assertRaises(ValidationError, msg="Experience should be >= 0"):
-            UserProfileBase(**data)
+            UserProfileCreate(**data)
 
     async def test_phone_number_validator(self):
         """Tes Validasi Kustom: Nomor telepon."""
@@ -344,13 +224,13 @@ class TestUserProfileBase(IsolatedAsyncioTestCase):
         data = self.valid_data.copy()
         data["phone"] = "08123456789"
         with self.assertRaises(ValidationError):
-            UserProfileBase(**data)
+            UserProfileCreate(**data)
 
     async def test_tags_validator(self):
         """Tes Validasi Kustom: Tags (interest/expertise)."""
         data = self.valid_data.copy()
         data["expertise"] = " docker ,  kubernetes  "
-        model = UserProfileBase(**data)
+        model = UserProfileCreate(**data)
         self.assertEqual(model.expertise, ["docker", "kubernetes"])
 
     async def test_username_validator(self):
@@ -358,14 +238,14 @@ class TestUserProfileBase(IsolatedAsyncioTestCase):
         data = self.valid_data.copy()
         data["github_username"] = "https://github.com/username"
         with self.assertRaises(ValidationError):
-            UserProfileBase(**data)
+            UserProfileCreate(**data)
 
     async def test_agreement_validator(self):
         """Tes Validasi Kustom: Checkbox persetujuan."""
         data = self.valid_data.copy()
         data["privacy_agreed"] = False
         with self.assertRaises(ValidationError) as context:
-            UserProfileBase(**data)
+            UserProfileCreate(**data)
         self.assertIn("This field must be checked", str(context.exception))
 
 

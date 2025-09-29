@@ -46,25 +46,75 @@ class LookingForOption(str, Enum):
 # --- Main Pydantic Model For DB---
 
 
-class UserProfilePublic(BaseModel):
+class UserProfileBase(BaseModel):
+    # Satu validator untuk semua field tags
+    @field_validator("interest", "expertise", mode="before", check_fields=False)
+    def split_tags(cls, v: Any) -> List[str]:
+        if v is None:
+            return []
+        if isinstance(v, str):
+            return [tag.strip() for tag in v.split(",") if tag.strip()]
+        if isinstance(v, list):
+            return v
+        raise ValueError("Tags must be a comma-separated string or a list of strings.")
+
+
+class UserProfileUpdateBase(UserProfileBase):
+    @field_validator("phone", mode="before", check_fields=False)
+    def validate_phone_number(cls, v: Any) -> Optional[str]:
+        if v is None:
+            return v
+        if not re.match(r"^\+[1-9]\d{1,14}$", str(v)):
+            raise ValueError(
+                "Phone number must be in international format, e.g., +6281234567890."
+            )
+        return str(v)
+
+    # Satu validator untuk semua username
+
+    @field_validator(
+        "github_username",
+        "facebook_username",
+        "linkedin_username",
+        "twitter_username",
+        "instagram_username",
+        mode="before",
+        check_fields=False,
+    )
+    def validate_username(cls, v: Any) -> Optional[str]:
+        if v is None:
+            return v
+        if "://" in str(v) or "/" in str(v):
+            raise ValueError("Please provide only the username, not the full URL.")
+        return str(v)
+
+    # Satu validator untuk semua checkbox agreement
+    @field_validator(
+        "coc_acknowledged", "terms_agreed", "privacy_agreed", check_fields=False
+    )
+    def must_be_true(cls, v: Any) -> bool:
+        if v is not True:
+            raise ValueError("This field must be checked to proceed.")
+        return v
+
+
+# 2. Model CREATE mewarisi dari BASE
+
+
+class UserProfilePublic(UserProfileBase):
     """Model untuk data publik yang bisa dilihat semua orang."""
 
-    profile_picture: Optional[HttpUrl] = None
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
-    job_category: Optional[JobCategory] = None
-    job_title: Optional[str] = None
-    country: Optional[str] = None
-    bio: Optional[str] = None
-    # Default True, karena semua user adalah peserta
-    participant_type: Optional[str] = "Non Participant"
-    # Default True, karena semua user setuju CoC
+    profile_picture: HttpUrl | None
+    first_name: str | None
+    last_name: str | None
+    job_category: JobCategory | None
+    job_title: str | None
+    country: str | None
+    bio: str | None
+    participant_type: str | None
     coc_acknowledged: Optional[bool] = False
-    # Default True, karena semua user setuju Terms
     terms_agreed: Optional[bool] = False
-    # Default True, karena semua user setuju Privacy
     privacy_agreed: Optional[bool] = False
-    # 1. Buat Model BASE dengan semua field yang sama
 
     class Config:
         # Konfigurasi agar model dapat digunakan dengan ORM
@@ -76,44 +126,44 @@ class UserProfilePrivate(UserProfilePublic):
 
     """Berisi semua field umum yang diisi oleh user dari form."""
 
-    email: Optional[EmailStr]
+    email: EmailStr | None
 
     # Professional Info
-    industry_categories: Optional[IndustryCategory]
-    company: Optional[str]
-    experience: Optional[int]
+    industry_categories: IndustryCategory | None
+    company: str | None
+    experience: int | None
 
     # Personal Details
-    t_shirt_size: Optional[TShirtSize]
-    gender: Optional[Gender]
-    date_of_birth: Optional[date]
-    phone: Optional[str]
+    t_shirt_size: TShirtSize | None
+    gender: Gender | None
+    date_of_birth: date | None
+    phone: str | None
+
     # Location
-    # Di-handle dengan API, tapi tetap string
-    state: Optional[str]
-    city: Optional[str]
-    zip_code: Optional[str]
-    address: Optional[str]
+    state: str | None
+    city: str | None
+    zip_code: str | None
+    address: str | None
 
     # Interests and Expertise
-    interest: Optional[List[str]]
-    looking_for: Optional[LookingForOption]
-    expertise: Optional[List[str]]
+    interest: List[str] | None
+    looking_for: LookingForOption | None
+    expertise: List[str] | None
 
     # Social & Portfolio
-    website: Optional[HttpUrl]
-    github_username: Optional[str]
-    facebook_username: Optional[str]
-    linkedin_username: Optional[str]
-    twitter_username: Optional[str]
-    instagram_username: Optional[str]
+    website: HttpUrl | None
+    github_username: str | None
+    facebook_username: str | None
+    linkedin_username: str | None
+    twitter_username: str | None
+    instagram_username: str | None
 
     class Config:
         # Konfigurasi agar model dapat digunakan dengan ORM
         from_attributes = True
 
 
-class UserProfileBase(BaseModel):
+class UserProfileCreate(UserProfileUpdateBase):
     """Berisi semua field umum yang diisi oleh user dari form."""
 
     first_name: str = Field(
@@ -180,66 +230,9 @@ class UserProfileBase(BaseModel):
     coc_acknowledged: bool = Field(..., description="Code of Conduct acknowledgement.")
     terms_agreed: bool = Field(..., description="Terms and Conditions agreement.")
     privacy_agreed: bool = Field(..., description="Privacy Policy agreement.")
-    # --- Custom Validators (V2 Syntax) ---
-
-    @field_validator("phone", mode="before")
-    def validate_phone_number(cls, v: Any) -> Optional[str]:
-        if v is None:
-            return v
-        if not re.match(r"^\+[1-9]\d{1,14}$", str(v)):
-            raise ValueError(
-                "Phone number must be in international format, e.g., +6281234567890."
-            )
-        return str(v)
-
-    # Satu validator untuk semua field tags
-    @field_validator("interest", "expertise", mode="before")
-    def split_tags(cls, v: Any) -> List[str]:
-        if v is None:
-            return []
-        if isinstance(v, str):
-            return [tag.strip() for tag in v.split(",") if tag.strip()]
-        if isinstance(v, list):
-            return v
-        raise ValueError("Tags must be a comma-separated string or a list of strings.")
-
-    # Satu validator untuk semua username
-    @field_validator(
-        "github_username",
-        "facebook_username",
-        "linkedin_username",
-        "twitter_username",
-        "instagram_username",
-        mode="before",
-    )
-    def validate_username(cls, v: Any) -> Optional[str]:
-        if v is None:
-            return v
-        if "://" in str(v) or "/" in str(v):
-            raise ValueError("Please provide only the username, not the full URL.")
-        return str(v)
-
-    # Satu validator untuk semua checkbox agreement
-    @field_validator("coc_acknowledged", "terms_agreed", "privacy_agreed")
-    def must_be_true(cls, v: Any) -> bool:
-        if v is not True:
-            raise ValueError("This field must be checked to proceed.")
-        return v
 
 
-# 2. Model CREATE mewarisi dari BASE
-
-
-class UserProfileCreate(UserProfileBase):
-    """Model untuk validasi data mentah dari form. Tidak ada field tambahan."""
-
-    pass
-
-
-# 3. Model DB juga mewarisi dari BASE dan menambahkan field baru
-
-
-class UserProfileDB(UserProfileBase):
+class UserProfileDB(UserProfileCreate):
     """
     Model yang merepresentasikan data lengkap di database.
     Mewarisi semua dari Base dan menambahkan field 'profile_picture'.
@@ -256,34 +249,38 @@ class UserProfileEditSuccessResponse(UserProfileDB):
         # Membuat contoh data untuk dokumentasi API
         json_schema_extra = {
             "example": {
-                "profile_picture": "https://example.com/image.png",
-                "first_name": "Budi",
-                "last_name": "Santoso",
-                "email": "budi.santoso@example.com",
-                "bio": "Passionate software engineer with 5 years of experience in backend development.",
+                "first_name": "string",
+                "last_name": "string",
+                "email": "user@example.com",
+                "bio": "menyemmmmmmmmmmmmmmmmmm",
                 "industry_categories": "Technology",
-                "company": "Tech Corp",
+                "company": "string",
                 "job_category": "Tech - Specialist",
-                "job_title": "Senior Software Engineer",
-                "experience": 5,
-                "t_shirt_size": "L",
+                "job_title": "string",
+                "experience": 4,
+                "t_shirt_size": "S",
                 "gender": "Male",
-                "date_of_birth": "1995-08-17",
-                "phone": "+6281234567890",
-                "country": "Indonesia",
-                "state": "West Java",
-                "city": "Bandung",
-                "zip_code": "40111",
-                "address": "Jl. Asia Afrika No. 1",
-                "interest": "python, fastapi, docker",
+                "date_of_birth": "2025-09-29",
+                "phone": "+61",
+                "participant_type": "Non Participant",
+                "country": "ii",
+                "state": "string",
+                "city": "string",
+                "zip_code": "string",
+                "address": "string",
+                "interest": ["string", "masokk pa eko"],
                 "looking_for": "Open Opportunities",
-                "expertise": "backend, devops",
-                "website": "https://budisantoso.dev",
-                "github_username": "budisdev",
-                "linkedin_username": "budisantoso",
+                "expertise": ["memasak", "meminum", "luar biasa"],
+                "website": "https://example.com/",
+                "github_username": "string",
+                "facebook_username": "string",
+                "linkedin_username": "",
+                "twitter_username": "string",
+                "instagram_username": "string",
                 "coc_acknowledged": True,
                 "terms_agreed": True,
                 "privacy_agreed": True,
+                "profile_picture": "https://example.com/files/roti.jpeg",
             }
         }
 

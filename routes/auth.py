@@ -3,7 +3,6 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from fastapi.security import OAuth2PasswordRequestForm
-from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from core.oauth import github_service, google_service
 from core.responses import (
@@ -15,7 +14,6 @@ from core.responses import (
     handle_http_exception,
 )
 from core.security import (
-    generate_hash_password,
     generate_token_from_user,
     get_user_from_token,
     invalidate_token,
@@ -23,7 +21,6 @@ from core.security import (
     oauth2_scheme,
 )
 from models import get_db_sync
-from models.User import User
 from schemas.common import (
     BadRequestResponse,
     InternalServerErrorResponse,
@@ -62,26 +59,6 @@ async def swagger_form_token(
     (token, refresh_token) = await generate_token_from_user(db=db, user=user)
 
     return {"access_token": token, "token_type": "bearer"}
-
-
-@router.post(
-    "/signup/",
-    responses={
-        "200": {"model": LoginSuccessResponse},
-        "400": {"model": BadRequestResponse},
-        "500": {"model": InternalServerErrorResponse},
-    },
-)
-async def signup(request: LoginRequest, db: Session = Depends(get_db_sync)):
-    # Given
-    new_user = User(
-        username=request.username,
-        password=generate_hash_password(request.password),
-        is_active=True,
-    )
-    db.add(new_user)
-    db.commit()
-    return common_response(Ok(data="registered succesfully"))
 
 
 @router.post(
@@ -307,11 +284,3 @@ async def google_verified(
                 error=f"Failed to handle OAuth verified google: {str(e)}"
             )
         )
-
-
-templates = Jinja2Templates(directory="templates")
-
-
-@router.get("/test-redirect")
-async def test_redirect(request: Request):
-    return templates.TemplateResponse(name="home.html", context={"request": request})
