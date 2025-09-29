@@ -4,46 +4,49 @@ from models.Ticket import Ticket
 from main import app
 import alembic.config
 import uuid
+from unittest import TestCase
 
 
-def setup_module(module):
-    alembic_args = ["upgrade", "head"]
-    alembic.config.main(argv=alembic_args)
+class TestTicket(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        alembic_args = ["upgrade", "head"]
+        alembic.config.main(argv=alembic_args)
 
+    def setUp(self):
+        self.connection = engine.connect()
+        self.trans = self.connection.begin()
+        self.session = db(
+            bind=self.connection, join_transaction_mode="create_savepoint"
+        )
 
-def test_list_ticket():
-    connection = engine.connect()
-    trans = connection.begin()
-    session = db(bind=connection, join_transaction_mode="create_savepoint")
+        ticket = Ticket(
+            id=uuid.uuid4(),
+            name="Test Ticket",
+            price=123456,
+            user_participant_type="In Person",
+            is_sold_out=False,
+            is_active=True,
+            description="Ini deskripsi test ticket",
+        )
+        self.session.add(ticket)
+        self.session.commit()
 
-    ticket = Ticket(
-        id=uuid.uuid4(),
-        name="Test Ticket",
-        price=123456,
-        user_participant_type="In Person",
-        is_sold_out=False,
-        is_active=True,
-        description="Ini deskripsi test ticket",
-    )
-    session.add(ticket)
-    session.commit()
+        app.dependency_overrides[get_db_sync] = get_db_sync_for_test(db=self.session)
+        self.client = TestClient(app)
 
-    app.dependency_overrides[get_db_sync] = get_db_sync_for_test(db=session)
-    client = TestClient(app)
+    def tearDown(self):
+        self.session.close()
+        self.trans.rollback()
+        self.connection.close()
 
-    # Test endpoint
-    response = client.get("/ticket/")
-    assert response.status_code == 200
-    data = response.json()
-    assert "results" in data
-    # Cek nama dan description
-    assert any(
-        t["name"] == "Test Ticket"
-        and t.get("description") == "Ini deskripsi test ticket"
-        for t in data["results"]
-    )
-
-    # Cleanup
-    session.close()
-    trans.rollback()
-    connection.close()
+    def test_list_ticket(self):
+        response = self.client.get("/ticket/")
+        assert response.status_code == 200
+        data = response.json()
+        assert "results" in data
+        assert any(
+            t["name"] == "Test Ticket"
+            and t.get("description") == "Ini deskripsi test ticket"
+            for t in data["results"]
+        )
