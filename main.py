@@ -7,6 +7,7 @@ from core.log import logger
 from routes.auth import router as auth_router
 from routes.user_profile import router as user_profile_router
 from starlette.middleware.sessions import SessionMiddleware
+from routes.ticket import router as ticket_router
 
 from settings import SECRET_KEY
 
@@ -31,6 +32,7 @@ app.add_middleware(
 
 app.include_router(auth_router)
 app.include_router(user_profile_router)
+app.include_router(ticket_router)
 
 
 @app.exception_handler(ValidationError)
