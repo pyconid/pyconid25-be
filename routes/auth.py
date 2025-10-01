@@ -2,6 +2,7 @@ import traceback
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
+from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from core.oauth import github_service, google_service
 from core.responses import (
@@ -38,6 +39,26 @@ from schemas.auth import (
 from repository import user as userRepo
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
+
+
+@router.post("/token")
+async def swagger_form_token(
+    form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db_sync)
+):
+    user = userRepo.get_user_by_username(db=db, username=form_data.username)
+    if user is None:
+        return common_response(BadRequest(message="Invalid Credentials"))
+
+    if not user.is_active:
+        return common_response(BadRequest(message="Invalid Credentials"))
+
+    is_valid = validated_password(user.password, form_data.password)
+    if not is_valid:
+        return common_response(BadRequest(message="Invalid Credentials"))
+
+    (token, refresh_token) = await generate_token_from_user(db=db, user=user)
+
+    return {"access_token": token, "token_type": "bearer"}
 
 
 @router.post(

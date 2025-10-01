@@ -1,11 +1,14 @@
+from sqlalchemy.orm import Session
 from typing import Optional, Tuple
 from datetime import datetime, timedelta
+from fastapi import Depends
 from fastapi.security import OAuth2PasswordBearer
 import bcrypt
 from pytz import timezone
 import pytz
 from sqlalchemy import delete, or_, select
 from sqlalchemy.orm import Session as SQLAlchemySession
+from models import get_db_sync
 from models.RefreshToken import RefreshToken
 from models.Token import Token
 import jwt
@@ -19,7 +22,7 @@ from settings import (
 )
 
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/token/")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/token/", auto_error=False)
 
 
 def generate_hash_password(password: str) -> str:
@@ -93,6 +96,12 @@ def get_user_from_token(db: SQLAlchemySession, token: str) -> Optional[User]:
         return None
 
     return session.user
+
+
+def get_current_user(
+    db: Session = Depends(get_db_sync), token: str = Depends(oauth2_scheme)
+) -> Optional[User]:
+    return get_user_from_token(db, token)
 
 
 def invalidate_token(db: SQLAlchemySession, token: str):
