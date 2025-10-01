@@ -1,4 +1,3 @@
-import unittest
 from pydantic import ValidationError
 import alembic.config
 from unittest import IsolatedAsyncioTestCase
@@ -267,7 +266,7 @@ class TestUserProfileCreate(IsolatedAsyncioTestCase):
             UserProfileCreate(**invalid_data)
 
 
-class TestUserProfileDB(unittest.TestCase):
+class TestUserProfileDB(IsolatedAsyncioTestCase):
     def setUp(self):
         self.valid_base_data = TestUserProfileBase().setUp()
         self.valid_db_data = self.valid_data = {

@@ -1,16 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from pydantic import BaseModel
-from typing import List
 from models import get_db_sync
 from repository.ticket import get_active_tickets
-from schemas.ticket import TicketResponse
+from schemas.ticket import TicketListResponse, TicketResponse
 
 router = APIRouter(prefix="/ticket", tags=["Ticket"])
-
-
-class TicketListResponse(BaseModel):
-    results: List[TicketResponse]
 
 
 @router.get("/", response_model=TicketListResponse)
