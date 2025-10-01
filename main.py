@@ -4,6 +4,7 @@ from core.health_check import health_check
 from core.log import logger
 from routes.auth import router as auth_router
 from starlette.middleware.sessions import SessionMiddleware
+from routes.ticket import router as ticket_router
 
 from settings import SECRET_KEY
 
@@ -27,6 +28,7 @@ app.add_middleware(
 )
 
 app.include_router(auth_router)
+app.include_router(ticket_router)
 
 
 @app.get("/")
