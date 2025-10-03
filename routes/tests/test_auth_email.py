@@ -1,3 +1,4 @@
+from unittest.mock import AsyncMock, patch
 import alembic.config
 from fastapi.testclient import TestClient
 from unittest import IsolatedAsyncioTestCase
@@ -9,6 +10,7 @@ from main import app
 from models.EmailVerification import EmailVerification
 from models.ResetPassword import ResetPassword
 from models.User import User
+from settings import FRONTEND_BASE_URL
 
 
 class TestAuthEmail(IsolatedAsyncioTestCase):
@@ -25,7 +27,8 @@ class TestAuthEmail(IsolatedAsyncioTestCase):
         # "create_savepoint" join_transaction_mode
         self.db = db(bind=self.connection, join_transaction_mode="create_savepoint")
 
-    async def test_signup(self):
+    @patch("routes.auth.send_email_verfication", new_callable=AsyncMock)
+    async def test_signup(self, mock_send_email_verfication):
         # Given
         new_user = User(
             username="someuser",
@@ -34,6 +37,7 @@ class TestAuthEmail(IsolatedAsyncioTestCase):
         )
         self.db.add(new_user)
         self.db.commit()
+        mock_send_email_verfication.return_value = None
         app.dependency_overrides[get_db_sync] = get_db_sync_for_test(db=self.db)
         client = TestClient(app)
 
@@ -56,6 +60,10 @@ class TestAuthEmail(IsolatedAsyncioTestCase):
         email_verification = self.db.execute(stmt).scalar()
         self.assertIsNotNone(email_verification)
         self.assertTrue(validated_password(email_verification.password, "password"))
+        activation_link = f"{FRONTEND_BASE_URL}/email-verification/?token={email_verification.verification_code}"
+        mock_send_email_verfication.assert_called_once_with(
+            recipient=email_verification.email, activation_link=activation_link
+        )
 
         # When 2 - Only one verification per email
         response = client.post(
@@ -123,7 +131,8 @@ class TestAuthEmail(IsolatedAsyncioTestCase):
         # Expect 5
         self.assertEqual(response.status_code, 200)
 
-    async def test_reset_password(self):
+    @patch("routes.auth.send_reset_password_email", new_callable=AsyncMock)
+    async def test_reset_password(self, mock_send_reset_password_email):
         # Given
         new_user = User(
             username="someuser",
@@ -133,6 +142,7 @@ class TestAuthEmail(IsolatedAsyncioTestCase):
         )
         self.db.add(new_user)
         self.db.commit()
+        mock_send_reset_password_email.return_value = None
         app.dependency_overrides[get_db_sync] = get_db_sync_for_test(db=self.db)
         client = TestClient(app)
 
@@ -158,6 +168,10 @@ class TestAuthEmail(IsolatedAsyncioTestCase):
         stmt = select(ResetPassword).where(ResetPassword.user == new_user)
         reset_password = self.db.execute(stmt).scalar()
         self.assertIsNotNone(reset_password)
+        reset_link = f"{FRONTEND_BASE_URL}/reset-password/?token={reset_password.token}"
+        mock_send_reset_password_email.assert_called_once_with(
+            recipient=new_user.email, reset_link=reset_link
+        )
 
         # When 3 - reset password with invalid token
         response = client.post(

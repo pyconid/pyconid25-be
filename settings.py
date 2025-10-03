@@ -9,6 +9,18 @@ if os.environ.get("ENVIRONTMENT") != "os":
 else:
     logger.info("load env from os")
 
+
+def str_to_bool(string: str) -> bool:
+    if string in ["true", "TRUE", "True"]:
+        return True
+    elif string in ["false", "FALSE", "False"]:
+        return False
+    else:
+        raise Exception(
+            f"{string} is not boolean, ex input true -> true, True, TRUE, ex input false -> false, False, FALSE"
+        )
+
+
 # Environtment
 ENVIRONTMENT = os.environ.get("ENVIRONTMENT")
 
@@ -41,3 +53,15 @@ GITHUB_CLIENT_SECRET = os.environ.get("GITHUB_CLIENT_SECRET")
 
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET")
+
+# MAIL conf
+MAIL_DYNAMIC = str_to_bool(os.environ.get("MAIL_DYNAMIC", "False"))
+MAIL_USERNAME = os.environ.get("MAIL_USERNAME", "")
+MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD", "")
+MAIL_FROM = os.environ.get("MAIL_FROM", "test@example.com")
+MAIL_PORT = int(os.environ.get("MAIL_PORT", "465"))
+MAIL_SERVER = os.environ.get("MAIL_SERVER", "")
+MAIL_FROM_NAME = os.environ.get("MAIL_FROM_NAME", "")
+MAIL_TLS = str_to_bool(os.environ.get("MAIL_TLS", "False"))
+MAIL_SSL = str_to_bool(os.environ.get("MAIL_SSL", "True"))
+USE_CREDENTIALS = str_to_bool(os.environ.get("USE_CREDENTIALS", "True"))

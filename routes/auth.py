@@ -6,7 +6,7 @@ from fastapi.responses import RedirectResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from pytz import timezone
 from sqlalchemy.orm import Session
-from core.email import send_email
+from core.email import send_email_verfication, send_reset_password_email
 from core.oauth import github_service, google_service
 from core.responses import (
     InternalServerError,
@@ -52,7 +52,7 @@ from schemas.auth import (
 from repository import user as userRepo
 from repository import email_verification as emailVerificationRepo
 from repository import reset_password as resetPasswordRepo
-from settings import TZ
+from settings import FRONTEND_BASE_URL, TZ
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
@@ -151,7 +151,12 @@ async def email_signup(request: SignUpRequest, db: Session = Depends(get_db_sync
             expired_at=expired_at,
             is_commit=False,
         )
-    send_email(email=request.email)
+    activation_link = (
+        f"{FRONTEND_BASE_URL}/email-verification/?token={verification_code}"
+    )
+    await send_email_verfication(
+        recipient=request.email, activation_link=activation_link
+    )
     db.commit()
     return common_response(NoContent())
 
@@ -275,14 +280,15 @@ async def forgot_password(
             is_commit=False,
         )
     else:
-        resetPasswordRepo.create_reset_password(
+        existing_reset_password = resetPasswordRepo.create_reset_password(
             db=db,
             user=user,
             token=token,
             expired_at=expired_at,
             is_commit=False,
         )
-    send_email(email=request.email)
+    reset_link = f"{FRONTEND_BASE_URL}/reset-password/?token={token}"
+    await send_reset_password_email(recipient=request.email, reset_link=reset_link)
     db.commit()
     return common_response(Ok(data={"message": "silahkan cek email anda"}))
 
