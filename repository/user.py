@@ -17,6 +17,109 @@ def get_user_by_username(db: Session, username: str) -> Optional[User]:
     return data
 
 
+def get_user_by_email(db: Session, email: str) -> Optional[User]:
+    stmt = select(User).where(User.email == email)
+    data = db.execute(stmt).scalar()
+    return data
+
+
+def create_user(
+    db: Session,
+    username: str = None,
+    password: str = None,
+    is_active: bool = False,
+    github_id: str = None,
+    github_username: str = None,
+    google_id: str = None,
+    google_email: str = None,
+    profile_picture: str = None,
+    first_name: str = None,
+    last_name: str = None,
+    email: str = None,
+    industry_categories: str = None,
+    company: str = None,
+    job_category: str = None,
+    job_title: str = None,
+    experience: int = None,
+    t_shirt_size: str = None,
+    gender: str = None,
+    date_of_birth: str = None,
+    phone: str = None,
+    country: str = None,
+    state: str = None,
+    city: str = None,
+    zip_code: int = None,
+    address: str = None,
+    bio: str = None,
+    interest: str = None,
+    looking_for: str = None,
+    expertise: str = None,
+    website: str = None,
+    facebook_username: str = None,
+    linkedin_username: str = None,
+    twitter_username: str = None,
+    instagram_username: str = None,
+    terms_agreed: bool = False,
+    privacy_agreed: bool = False,
+    coc_acknowledged: bool = False,
+    participant_type: str = "Non Participant",
+    created_at=None,
+    updated_at=None,
+    deleted_at=None,
+    is_commit: bool = True,
+) -> User:
+    """
+    Create a new user in the database using all User model columns except id.
+    """
+    user = User(
+        username=username,
+        password=password,
+        is_active=is_active,
+        github_id=github_id,
+        github_username=github_username,
+        google_id=google_id,
+        google_email=google_email,
+        profile_picture=profile_picture,
+        first_name=first_name,
+        last_name=last_name,
+        email=email,
+        industry_categories=industry_categories,
+        company=company,
+        job_category=job_category,
+        job_title=job_title,
+        experience=experience,
+        t_shirt_size=t_shirt_size,
+        gender=gender,
+        date_of_birth=date_of_birth,
+        phone=phone,
+        country=country,
+        state=state,
+        city=city,
+        zip_code=zip_code,
+        address=address,
+        bio=bio,
+        interest=interest,
+        looking_for=looking_for,
+        expertise=expertise,
+        website=website,
+        facebook_username=facebook_username,
+        linkedin_username=linkedin_username,
+        twitter_username=twitter_username,
+        instagram_username=instagram_username,
+        terms_agreed=terms_agreed,
+        privacy_agreed=privacy_agreed,
+        coc_acknowledged=coc_acknowledged,
+        participant_type=participant_type,
+        created_at=created_at,
+        updated_at=updated_at,
+        deleted_at=deleted_at,
+    )
+    db.add(user)
+    if is_commit:
+        db.commit()
+    return user
+
+
 def update_user_profile(
     db: Session, user_id: UUID, profile_data: UserProfileDB
 ) -> Optional[User]:

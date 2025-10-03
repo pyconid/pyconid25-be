@@ -30,6 +30,7 @@ class TestAuth(IsolatedAsyncioTestCase):
         # Given
         new_user = User(
             username="testuser",
+            email="testuser@example.com",
             password=generate_hash_password("password"),
             is_active=True,
         )
@@ -40,7 +41,8 @@ class TestAuth(IsolatedAsyncioTestCase):
 
         # When 1
         response = client.post(
-            "/auth/login/", json={"username": "testuser", "password": "password"}
+            "/auth/email/signin/",
+            json={"email": "testuser@example.com", "password": "password"},
         )
 
         # Expect 1
@@ -54,7 +56,8 @@ class TestAuth(IsolatedAsyncioTestCase):
 
         # When 2
         response = client.post(
-            "/auth/login/", json={"username": "testuser", "password": "wrongpassword"}
+            "/auth/email/signin/",
+            json={"email": "unregistered@example.com", "password": "wrongpassword"},
         )
 
         # Expect 2

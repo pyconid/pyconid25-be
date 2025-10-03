@@ -32,6 +32,7 @@ class TestUserProfile(IsolatedAsyncioTestCase):
         # Given
         new_user = User(
             username="testuser",
+            email="testuser@local.com",
             password=generate_hash_password("password"),
             is_active=True,
         )
@@ -40,7 +41,8 @@ class TestUserProfile(IsolatedAsyncioTestCase):
         app.dependency_overrides[get_db_sync] = get_db_sync_for_test(db=self.db)
         client = TestClient(app)
         response = client.post(
-            "/auth/login/", json={"username": "testuser", "password": "password"}
+            "/auth/email/signin/",
+            json={"email": "testuser@local.com", "password": "password"},
         )
         token = response.json().get("token", None)
 
@@ -96,6 +98,7 @@ class TestUserProfile(IsolatedAsyncioTestCase):
         # Given
         new_user = User(
             username="testuser",
+            email="testuser@local.com",
             password=generate_hash_password("password"),
             is_active=True,
         )
@@ -104,7 +107,8 @@ class TestUserProfile(IsolatedAsyncioTestCase):
         app.dependency_overrides[get_db_sync] = get_db_sync_for_test(db=self.db)
         client = TestClient(app)
         response = client.post(
-            "/auth/login/", json={"username": "testuser", "password": "password"}
+            "/auth/email/signin/",
+            json={"email": "testuser@local.com", "password": "password"},
         )
         token = response.json().get("token", None)
 

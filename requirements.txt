@@ -1,8 +1,10 @@
+aiosmtplib==3.0.2
 alembic==1.15.1
 annotated-types==0.7.0
 anyio==4.8.0
 Authlib==1.6.0
 bcrypt==4.3.0
+blinker==1.9.0
 certifi==2025.1.31
 cffi==1.17.1
 click==8.1.8
@@ -13,6 +15,7 @@ email_validator==2.2.0
 execnet==2.1.1
 fastapi==0.115.11
 fastapi-cli==0.0.7
+fastapi-mail==1.5.0
 greenlet==3.1.1
 h11==0.14.0
 httpcore==1.0.7
@@ -34,6 +37,7 @@ psycopg==3.2.5
 psycopg-binary==3.2.5
 pycparser==2.22
 pydantic==2.10.6
+pydantic-settings==2.11.0
 pydantic_core==2.27.2
 Pygments==2.19.1
 PyJWT==2.10.1
@@ -53,6 +57,7 @@ starlette==0.46.0
 typer==0.15.2
 types-Authlib==1.6.0.20250711
 types-pytz==2025.1.0.20250204
+typing-inspection==0.4.2
 typing_extensions==4.12.2
 uvicorn==0.34.0
 uvloop==0.21.0
