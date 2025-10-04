@@ -57,7 +57,7 @@ from settings import FRONTEND_BASE_URL, TZ
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
 
-@router.post("/token")
+@router.post("/token/")
 async def swagger_form_token(
     form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db_sync)
 ):
