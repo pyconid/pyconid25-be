@@ -2,6 +2,7 @@ env/
 **__pycache__**
 railway-token.txt
 .env
+.env.dev
 
 # ignore uv related
 .venv
