@@ -88,11 +88,11 @@ jobs:
       # Load .env sesuai branch
       - name: Load .env for build context (dev)
         if: ${{ github.ref_name == 'dev' }}
-        run: echo "${{ secrets.DEV_ENV_FILE }}" > .env
+        run: printf "%s" "${{ secrets.DEV_ENV_FILE }}" > .env
 
-      - name: Load .env for build context (main/prod)
-        if: ${{ github.ref_name == 'main' }}
-        run: echo "${{ secrets.PROD_ENV_FILE }}" > .env
+      - name: Load .env for build context (dev)
+        if: ${{ github.ref_name == 'dev' }}
+        run: printf "%s" "${{ secrets.DEV_ENV_FILE }}" > .env
 
       - name: Export variables and Build Docker image
         run: |
