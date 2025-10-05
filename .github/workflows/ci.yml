@@ -94,21 +94,16 @@ jobs:
         if: ${{ github.ref_name == 'dev' }}
         run: printf "%s" "${{ secrets.DEV_ENV_FILE }}" > .env
 
-      - name: Export variables and Build Docker image
+      - name: Build Docker image with .env
         run: |
-          set -a
-          source .env
-          set +a
           docker build \
+            --env-file .env \
             -t ghcr.io/${GHCR_USERNAME}/${IMAGE_NAME}:${{ steps.version.outputs.version }} \
             -t ghcr.io/${GHCR_USERNAME}/${IMAGE_NAME}:latest \
             .
 
       - name: Push Docker image
         run: |
-          set -a
-          source .env
-          set +a
           docker push ghcr.io/${GHCR_USERNAME}/${IMAGE_NAME}:${{ steps.version.outputs.version }}
           docker push ghcr.io/${GHCR_USERNAME}/${IMAGE_NAME}:latest
 
