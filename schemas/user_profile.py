@@ -1,0 +1,339 @@
+import re
+from datetime import date
+from enum import Enum
+from typing import Optional, List, Any
+
+from pydantic import BaseModel, EmailStr, Field, HttpUrl, field_validator
+
+# --- Enums for Dropdown Fields ---
+# Menggunakan Enum memastikan data yang masuk adalah salah satu dari opsi yang valid.
+
+
+class IndustryCategory(str, Enum):
+    TECHNOLOGY = "Technology"
+    FINANCE = "Finance"
+    HEALTHCARE = "Healthcare"
+    EDUCATION = "Education"
+
+
+class JobCategory(str, Enum):
+    TECH_SPECIALIST = "Tech - Specialist"
+    MANAGEMENT = "Management"
+    DESIGN = "Design"
+    MARKETING = "Marketing"
+
+
+class TShirtSize(str, Enum):
+    S = "S"
+    M = "M"
+    L = "L"
+    XL = "XL"
+    XXL = "XXL"
+
+
+class Gender(str, Enum):
+    MALE = "Male"
+    FEMALE = "Female"
+
+
+class LookingForOption(str, Enum):
+    OPEN_OPPORTUNITIES = "Open Opportunities"
+    NETWORKING = "Networking"
+    HIRING = "Hiring"
+    MENTORSHIP = "Mentorship"
+
+
+# --- Main Pydantic Model For DB---
+
+
+class UserProfileBase(BaseModel):
+    # Satu validator untuk semua field tags
+    @field_validator("interest", "expertise", mode="before", check_fields=False)
+    def split_tags(cls, v: Any) -> List[str]:
+        if v is None:
+            return []
+        if isinstance(v, str):
+            return [tag.strip() for tag in v.split(",") if tag.strip()]
+        if isinstance(v, list):
+            return v
+        raise ValueError("Tags must be a comma-separated string or a list of strings.")
+
+
+class UserProfileUpdateBase(UserProfileBase):
+    @field_validator("phone", mode="before", check_fields=False)
+    def validate_phone_number(cls, v: Any) -> Optional[str]:
+        if v is None:
+            return v
+        if not re.match(r"^\+[1-9]\d{1,14}$", str(v)):
+            raise ValueError(
+                "Phone number must be in international format, e.g., +6281234567890."
+            )
+        return str(v)
+
+    # Satu validator untuk semua username
+
+    @field_validator(
+        "github_username",
+        "facebook_username",
+        "linkedin_username",
+        "twitter_username",
+        "instagram_username",
+        mode="before",
+        check_fields=False,
+    )
+    def validate_username(cls, v: Any) -> Optional[str]:
+        if v is None:
+            return v
+        if "://" in str(v) or "/" in str(v):
+            raise ValueError("Please provide only the username, not the full URL.")
+        return str(v)
+
+    # Satu validator untuk semua checkbox agreement
+    @field_validator(
+        "coc_acknowledged", "terms_agreed", "privacy_agreed", check_fields=False
+    )
+    def must_be_true(cls, v: Any) -> bool:
+        if v is not True:
+            raise ValueError("This field must be checked to proceed.")
+        return v
+
+
+# 2. Model CREATE mewarisi dari BASE
+
+
+class UserProfilePublic(UserProfileBase):
+    """Model untuk data publik yang bisa dilihat semua orang."""
+
+    profile_picture: HttpUrl | None
+    first_name: str | None
+    last_name: str | None
+    job_category: JobCategory | None
+    job_title: str | None
+    country: str | None
+    bio: str | None
+    participant_type: str | None
+    coc_acknowledged: Optional[bool] = False
+    terms_agreed: Optional[bool] = False
+    privacy_agreed: Optional[bool] = False
+
+    class Config:
+        # Konfigurasi agar model dapat digunakan dengan ORM
+        from_attributes = True
+
+
+class UserProfilePrivate(UserProfilePublic):
+    """Model untuk data privat yang hanya bisa dilihat oleh user itu sendiri."""
+
+    """Berisi semua field umum yang diisi oleh user dari form."""
+
+    email: EmailStr | None
+
+    # Professional Info
+    industry_categories: IndustryCategory | None
+    company: str | None
+    experience: int | None
+
+    # Personal Details
+    t_shirt_size: TShirtSize | None
+    gender: Gender | None
+    date_of_birth: date | None
+    phone: str | None
+
+    # Location
+    state: str | None
+    city: str | None
+    zip_code: str | None
+    address: str | None
+
+    # Interests and Expertise
+    interest: List[str] | None
+    looking_for: LookingForOption | None
+    expertise: List[str] | None
+
+    # Social & Portfolio
+    website: HttpUrl | None
+    github_username: str | None
+    facebook_username: str | None
+    linkedin_username: str | None
+    twitter_username: str | None
+    instagram_username: str | None
+
+    class Config:
+        # Konfigurasi agar model dapat digunakan dengan ORM
+        from_attributes = True
+
+
+class UserProfileCreate(UserProfileUpdateBase):
+    """Berisi semua field umum yang diisi oleh user dari form."""
+
+    first_name: str = Field(
+        ..., min_length=1, max_length=50, description="User's first name."
+    )
+    last_name: str = Field(
+        ..., min_length=1, max_length=50, description="User's last name."
+    )
+    email: Optional[EmailStr] = Field(None, description="User's email address.")
+    bio: str = Field(
+        ...,
+        min_length=10,
+        max_length=1000,
+        description="Short biography about the user.",
+    )
+
+    # Professional Info
+    industry_categories: Optional[IndustryCategory] = None
+    company: Optional[str] = Field(
+        None, max_length=100, description="Company or organization name."
+    )
+    job_category: JobCategory = Field(..., description="Category of the user's job.")
+    job_title: str = Field(..., max_length=100, description="User's job title.")
+    experience: Optional[int] = Field(
+        None, ge=0, description="Years of professional experience."
+    )
+
+    # Personal Details
+    t_shirt_size: Optional[TShirtSize] = None
+    gender: Optional[Gender] = None
+    date_of_birth: Optional[date] = None
+    phone: Optional[str] = Field(
+        None, description="Phone number including country code (e.g., +6281234567890)."
+    )
+    participant_type: Optional[str] = Field(
+        "Non Participant", description="Type of participant."
+    )
+    # Location
+    # Di-handle dengan API, tapi tetap string
+    country: str = Field(..., description="User's country.")
+    state: Optional[str] = Field(None, description="User's state/province.")
+    city: Optional[str] = Field(None, description="User's city.")
+    zip_code: Optional[str] = Field(
+        None, max_length=10, description="Postal or zip code."
+    )
+    address: Optional[str] = Field(None, max_length=255, description="Full address.")
+
+    # Interests and Expertise
+    interest: Optional[List[str]] = Field(None, description="List of user's interests.")
+    looking_for: Optional[LookingForOption] = None
+    expertise: Optional[List[str]] = Field(
+        None, description="List of skills user is offering or searching for."
+    )
+
+    # Social & Portfolio
+    website: Optional[HttpUrl] = None
+    github_username: Optional[str] = None
+    facebook_username: Optional[str] = None
+    linkedin_username: Optional[str] = None
+    twitter_username: Optional[str] = None
+    instagram_username: Optional[str] = None
+
+    # Agreements
+    coc_acknowledged: bool = Field(..., description="Code of Conduct acknowledgement.")
+    terms_agreed: bool = Field(..., description="Terms and Conditions agreement.")
+    privacy_agreed: bool = Field(..., description="Privacy Policy agreement.")
+
+
+class UserProfileDB(UserProfileCreate):
+    """
+    Model yang merepresentasikan data lengkap di database.
+    Mewarisi semua dari Base dan menambahkan field 'profile_picture'.
+    """
+
+    # Profile Info
+    profile_picture: HttpUrl = Field(..., description="URL to the profile picture.")
+
+
+class UserProfileEditSuccessResponse(UserProfileDB):
+    class Config:
+        # Konfigurasi agar model dapat digunakan dengan ORM
+        from_attributes = True
+        # Membuat contoh data untuk dokumentasi API
+        json_schema_extra = {
+            "example": {
+                "first_name": "string",
+                "last_name": "string",
+                "email": "user@example.com",
+                "bio": "menyemmmmmmmmmmmmmmmmmm",
+                "industry_categories": "Technology",
+                "company": "string",
+                "job_category": "Tech - Specialist",
+                "job_title": "string",
+                "experience": 4,
+                "t_shirt_size": "S",
+                "gender": "Male",
+                "date_of_birth": "2025-09-29",
+                "phone": "+61",
+                "participant_type": "Non Participant",
+                "country": "ii",
+                "state": "string",
+                "city": "string",
+                "zip_code": "string",
+                "address": "string",
+                "interest": ["string", "masokk pa eko"],
+                "looking_for": "Open Opportunities",
+                "expertise": ["memasak", "meminum", "luar biasa"],
+                "website": "https://example.com/",
+                "github_username": "string",
+                "facebook_username": "string",
+                "linkedin_username": "",
+                "twitter_username": "string",
+                "instagram_username": "string",
+                "coc_acknowledged": True,
+                "terms_agreed": True,
+                "privacy_agreed": True,
+                "profile_picture": "https://example.com/files/roti.jpeg",
+            }
+        }
+
+
+# --- Contoh Penggunaan ---
+if __name__ == "__main__":
+    # 1. Contoh data valid
+    valid_data = {
+        "profile_picture": "https://example.com/profile.jpg",
+        "first_name": "Citra",
+        "last_name": "Wijaya",
+        "email": "citra.w@email.com",
+        "bio": "A creative designer focused on user experience and interface design.",
+        "job_category": "Design",
+        "job_title": "UI/UX Designer",
+        "country": "Indonesia",
+        "interest": "figma, design thinking, user research",  # Akan diubah jadi list
+        "coc_acknowledged": True,
+        "terms_agreed": True,
+        "privacy_agreed": True,
+    }
+
+    try:
+        profile = UserProfileDB(**valid_data)
+        print("✅ Data valid!")
+        print(profile.model_dump_json(indent=2))
+        # Cek hasil konversi tags
+        print(f"\nInterests as list: {profile.interest}")
+    except Exception as e:
+        print("❌ Gagal validasi data valid:")
+        print(e)
+
+    print("\n" + "-" * 50 + "\n")
+
+    # 2. Contoh data tidak valid
+    invalid_data = {
+        "profile_picture": "not-a-url",  # URL tidak valid
+        "first_name": "Andi",
+        "last_name": "Pratama",
+        "email": "andi@.com",  # Email tidak valid
+        "bio": "Too short",  # Bio terlalu pendek (min_length=10)
+        "job_category": "Tech - Specialist",
+        "job_title": "Developer",
+        "country": "Indonesia",
+        "phone": "081234567890",  # Format telepon salah
+        "github_username": "https://github.com/andipratama",  # Seharusnya username saja
+        "coc_acknowledged": False,  # Harus True
+        "terms_agreed": True,
+        "privacy_agreed": True,
+    }
+
+    try:
+        profile = UserProfileDB(**invalid_data)
+    except Exception as e:
+        print("❌ Gagal validasi data tidak valid (sesuai harapan):")
+        print(e)

@@ -49,3 +49,6 @@ class Base(DeclarativeBase):
 from models.User import User  # NOQA
 from models.Token import Token  # NOQA
 from models.RefreshToken import RefreshToken  # NOQA
+from models.Ticket import Ticket  # NOQA
+from models.EmailVerification import EmailVerification  # NOQA
+from models.ResetPassword import ResetPassword  # NOQA
