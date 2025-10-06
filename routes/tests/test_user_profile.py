@@ -5,6 +5,7 @@ from unittest import IsolatedAsyncioTestCase
 from fastapi.testclient import TestClient
 from core.security import generate_hash_password
 from models import engine, db, get_db_sync, get_db_sync_for_test
+from models.Country import Country
 from models.User import User
 from main import app
 from schemas.user_profile import (
@@ -37,6 +38,10 @@ class TestUserProfile(IsolatedAsyncioTestCase):
             is_active=True,
         )
         self.db.add(new_user)
+
+        dummy_country = Country(id=1, name="Indonesia", iso2="ID", iso3="IDN")
+        self.db.merge(dummy_country)
+
         self.db.commit()
         app.dependency_overrides[get_db_sync] = get_db_sync_for_test(db=self.db)
         client = TestClient(app)
@@ -58,7 +63,7 @@ class TestUserProfile(IsolatedAsyncioTestCase):
                 "bio": "A creative designer focused on user experience and interface design.",
                 "job_category": "Design",
                 "job_title": "UI/UX Designer",
-                "country": "Indonesia",
+                "country_id": 1,
                 "interest": "figma, design thinking, user research",  # Akan diubah jadi list
                 "coc_acknowledged": True,
                 "terms_agreed": True,
@@ -82,7 +87,7 @@ class TestUserProfile(IsolatedAsyncioTestCase):
                 "bio": "Too short",  # Bio terlalu pendek (min_length=10)
                 "job_category": "Tech - Specialist",
                 "job_title": "Developer",
-                "country": "Indonesia",
+                "country_id": 1,
                 "phone": "081234567890",  # Format telepon salah
                 "github_username": "https://github.com/andipratama",  # Seharusnya username saja
                 "coc_acknowledged": False,  # Harus True
@@ -176,7 +181,7 @@ class TestUserProfileBase(IsolatedAsyncioTestCase):
             "bio": "Seorang software engineer handal dengan pengalaman lebih dari 5 tahun.",
             "job_category": JobCategory.TECH_SPECIALIST,
             "job_title": "Senior Backend Developer",
-            "country": "Indonesia",
+            "country_id": 1,
             "phone": "+6281234567890",
             "interest": "python, fastapi, testing",
             "github_username": "budisan",
@@ -261,7 +266,7 @@ class TestUserProfileCreate(IsolatedAsyncioTestCase):
             "bio": "Seorang software engineer handal dengan pengalaman lebih dari 5 tahun.",
             "job_category": JobCategory.TECH_SPECIALIST,
             "job_title": "Senior Backend Developer",
-            "country": "Indonesia",
+            "country_id": 1,
             "coc_acknowledged": True,
             "terms_agreed": True,
             "privacy_agreed": True,
@@ -280,7 +285,7 @@ class TestUserProfileDB(IsolatedAsyncioTestCase):
             "bio": "Seorang software engineer handal dengan pengalaman lebih dari 5 tahun.",
             "job_category": JobCategory.TECH_SPECIALIST,
             "job_title": "Senior Backend Developer",
-            "country": "Indonesia",
+            "country_id": 1,
             "phone": "+6281234567890",
             "interest": "python, fastapi, testing",
             "github_username": "budisan",
