@@ -5,6 +5,7 @@ from typing import Optional, List, Any
 
 from pydantic import (
     BaseModel,
+    ConfigDict,
     EmailStr,
     Field,
     HttpUrl,
@@ -120,6 +121,8 @@ class UserProfileUpdateBase(UserProfileBase):
 class UserProfilePublic(UserProfileBase):
     """Model untuk data publik yang bisa dilihat semua orang."""
 
+    model_config = ConfigDict(from_attributes=True)
+
     profile_picture: HttpUrl | None
     first_name: str | None
     last_name: str | None
@@ -144,15 +147,12 @@ class UserProfilePublic(UserProfileBase):
             return result
         return data
 
-    class Config:
-        # Konfigurasi agar model dapat digunakan dengan ORM
-        from_attributes = True
-
 
 class UserProfilePrivate(UserProfilePublic):
     """Model untuk data privat yang hanya bisa dilihat oleh user itu sendiri."""
 
     """Berisi semua field umum yang diisi oleh user dari form."""
+    model_config = ConfigDict(from_attributes=True)
 
     email: EmailStr | None
 
@@ -200,10 +200,6 @@ class UserProfilePrivate(UserProfilePublic):
 
             return result
         return data
-
-    class Config:
-        # Konfigurasi agar model dapat digunakan dengan ORM
-        from_attributes = True
 
 
 class UserProfileCreate(UserProfileUpdateBase):
@@ -286,11 +282,9 @@ class UserProfileDB(UserProfileCreate):
 
 
 class UserProfileEditSuccessResponse(UserProfileDB):
-    class Config:
-        # Konfigurasi agar model dapat digunakan dengan ORM
-        from_attributes = True
-        # Membuat contoh data untuk dokumentasi API
-        json_schema_extra = {
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_schema_extra={
             "example": {
                 "first_name": "string",
                 "last_name": "string",
@@ -325,7 +319,8 @@ class UserProfileEditSuccessResponse(UserProfileDB):
                 "privacy_agreed": True,
                 "profile_picture": "https://example.com/files/roti.jpeg",
             }
-        }
+        },
+    )
 
 
 # --- Contoh Penggunaan ---
