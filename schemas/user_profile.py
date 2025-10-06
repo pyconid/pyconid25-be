@@ -375,3 +375,16 @@ if __name__ == "__main__":
     except Exception as e:
         print("❌ Gagal validasi data tidak valid (sesuai harapan):")
         print(e)
+
+
+class EnumDropdownItem(BaseModel):
+    value: str
+    label: str
+
+
+class IndustryCategoryDropdownResponse(BaseModel):
+    results: List[EnumDropdownItem]
+
+
+class JobCategoryDropdownResponse(BaseModel):
+    results: List[EnumDropdownItem]

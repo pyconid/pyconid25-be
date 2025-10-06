@@ -1,6 +1,7 @@
+from typing import List, Optional
+
 from fastapi import Query
 from pydantic import BaseModel
-from typing import List, Optional
 
 
 class CountryDropdownQuery(BaseModel):
@@ -51,16 +52,3 @@ class CityDropdownResponse(BaseModel):
 
     limit: Optional[int] = None
     results: List[City]
-
-
-class EnumDropdownItem(BaseModel):
-    value: str
-    label: str
-
-
-class IndustryCategoryDropdownResponse(BaseModel):
-    results: List[EnumDropdownItem]
-
-
-class JobCategoryDropdownResponse(BaseModel):
-    results: List[EnumDropdownItem]

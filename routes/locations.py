@@ -5,24 +5,17 @@ from sqlalchemy.orm import Session
 from core.responses import InternalServerError, Ok, common_response
 from models import get_db_sync
 from schemas.common import InternalServerErrorResponse
-from schemas.dropdown import (
+from schemas.locations import (
     CityDropdownQuery,
     CountryDropdownQuery,
     CountryDropdownResponse,
     StateDropdownQuery,
     StateDropdownResponse,
     CityDropdownResponse,
-    EnumDropdownItem,
-    IndustryCategoryDropdownResponse,
-    JobCategoryDropdownResponse,
-)
-from schemas.user_profile import (
-    IndustryCategory,
-    JobCategory,
 )
 from repository import locations as locationRepo
 
-router = APIRouter(prefix="/dropdown", tags=["Dropdown"])
+router = APIRouter(prefix="/locations", tags=["Locations"])
 
 
 @router.get(
@@ -133,21 +126,3 @@ async def get_cities(
     except Exception as e:
         traceback.print_exc()
         return common_response(InternalServerError(error=str(e)))
-
-
-@router.get("/industry-categories/", response_model=IndustryCategoryDropdownResponse)
-async def get_industry_categories():
-    items = [
-        EnumDropdownItem(value=category.value, label=category.value)
-        for category in IndustryCategory
-    ]
-    return IndustryCategoryDropdownResponse(results=items)
-
-
-@router.get("/job-categories/", response_model=JobCategoryDropdownResponse)
-async def get_job_categories():
-    items = [
-        EnumDropdownItem(value=category.value, label=category.value)
-        for category in JobCategory
-    ]
-    return JobCategoryDropdownResponse(results=items)

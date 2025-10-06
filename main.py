@@ -6,7 +6,7 @@ from core.health_check import health_check
 from core.log import logger
 from routes.auth import router as auth_router
 from routes.user_profile import router as user_profile_router
-from routes.dropdown import router as dropdown_router
+from routes.locations import router as locations_router
 from starlette.middleware.sessions import SessionMiddleware
 from routes.ticket import router as ticket_router
 
@@ -33,7 +33,7 @@ app.add_middleware(
 
 app.include_router(auth_router)
 app.include_router(user_profile_router)
-app.include_router(dropdown_router)
+app.include_router(locations_router)
 app.include_router(ticket_router)
 
 

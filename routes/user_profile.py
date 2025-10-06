@@ -15,6 +15,9 @@ from schemas.user_profile import (
     UserProfileDB,
     UserProfileEditSuccessResponse,
     UserProfilePrivate,
+    EnumDropdownItem,
+    IndustryCategoryDropdownResponse,
+    JobCategoryDropdownResponse,
 )
 from sqlalchemy.orm import Session
 from core.responses import (
@@ -174,3 +177,21 @@ async def get_user_profile(user: User = Depends(get_current_user)):
         return common_response(Unauthorized(message="Unauthorized"))
     user_schema = UserProfilePrivate.model_validate(user)
     return user_schema
+
+
+@router.get("/options/industries", response_model=IndustryCategoryDropdownResponse)
+async def get_industry_options():
+    items = [
+        EnumDropdownItem(value=category.value, label=category.value)
+        for category in IndustryCategory
+    ]
+    return IndustryCategoryDropdownResponse(results=items)
+
+
+@router.get("/options/jobs", response_model=JobCategoryDropdownResponse)
+async def get_job_options():
+    items = [
+        EnumDropdownItem(value=category.value, label=category.value)
+        for category in JobCategory
+    ]
+    return JobCategoryDropdownResponse(results=items)
