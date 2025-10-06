@@ -1,6 +1,6 @@
 import uuid
 from models import Base
-from sqlalchemy import UUID, DateTime, String, Boolean
+from sqlalchemy import UUID, DateTime, String, Boolean, Integer, ForeignKey
 from sqlalchemy.orm import mapped_column, Mapped, relationship
 
 
@@ -44,9 +44,15 @@ class User(Base):
     gender: Mapped[str] = mapped_column("gender", String, nullable=True)
     date_of_birth: Mapped[str] = mapped_column("date_of_birth", String, nullable=True)
     phone: Mapped[str] = mapped_column("phone", String, nullable=True)
-    country: Mapped[str] = mapped_column("country", String, nullable=True)
-    state: Mapped[str] = mapped_column("state", String, nullable=True)
-    city: Mapped[str] = mapped_column("city", String, nullable=True)
+    country_id: Mapped[int] = mapped_column(
+        "country_id", Integer, ForeignKey("country.id"), nullable=True, index=True
+    )
+    state_id: Mapped[int] = mapped_column(
+        "state_id", Integer, ForeignKey("state.id"), nullable=True, index=True
+    )
+    city_id: Mapped[int] = mapped_column(
+        "city_id", Integer, ForeignKey("city.id"), nullable=True, index=True
+    )
     zip_code: Mapped[int] = mapped_column("zip_code", String, nullable=True)
     address: Mapped[str] = mapped_column("address", String, nullable=True)
     bio: Mapped[str] = mapped_column("bio", String, nullable=True)
@@ -86,3 +92,8 @@ class User(Base):
     # One to Many
     tokens = relationship("Token", back_populates="user")
     refresh_tokens = relationship("RefreshToken", back_populates="user")
+
+    # Many to One - Location relationships
+    country = relationship("Country", back_populates="users")
+    state = relationship("State", back_populates="users")
+    city = relationship("City", back_populates="users")
