@@ -3,10 +3,14 @@ from datetime import date
 from enum import Enum
 from typing import Optional, List, Any
 
-from pydantic import BaseModel, EmailStr, Field, HttpUrl, field_validator
-
-# --- Enums for Dropdown Fields ---
-# Menggunakan Enum memastikan data yang masuk adalah salah satu dari opsi yang valid.
+from pydantic import (
+    BaseModel,
+    EmailStr,
+    Field,
+    HttpUrl,
+    field_validator,
+    model_validator,
+)
 
 
 class IndustryCategory(str, Enum):
@@ -43,7 +47,19 @@ class LookingForOption(str, Enum):
     MENTORSHIP = "Mentorship"
 
 
-# --- Main Pydantic Model For DB---
+class CountryReference(BaseModel):
+    id: int
+    name: str
+
+
+class StateReference(BaseModel):
+    id: int
+    name: str
+
+
+class CityReference(BaseModel):
+    id: int
+    name: str
 
 
 class UserProfileBase(BaseModel):
@@ -109,12 +125,24 @@ class UserProfilePublic(UserProfileBase):
     last_name: str | None
     job_category: JobCategory | None
     job_title: str | None
-    country: str | None
+    country: Optional[CountryReference] = None
     bio: str | None
     participant_type: str | None
     coc_acknowledged: Optional[bool] = False
     terms_agreed: Optional[bool] = False
     privacy_agreed: Optional[bool] = False
+
+    @model_validator(mode="before")
+    @classmethod
+    def extract_relationships(cls, data: Any) -> Any:
+        if hasattr(data, "__dict__"):
+            result = {k: v for k, v in data.__dict__.items() if not k.startswith("_")}
+
+            if hasattr(data, "country") and data.country:
+                result["country"] = {"id": data.country.id, "name": data.country.name}
+
+            return result
+        return data
 
     class Config:
         # Konfigurasi agar model dapat digunakan dengan ORM
@@ -140,9 +168,9 @@ class UserProfilePrivate(UserProfilePublic):
     phone: str | None
 
     # Location
-    state: str | None
-    city: str | None
-    zip_code: str | None
+    state: Optional[StateReference] = None
+    city: Optional[CityReference] = None
+    zip_code: Optional[str] = None
     address: str | None
 
     # Interests and Expertise
@@ -157,6 +185,21 @@ class UserProfilePrivate(UserProfilePublic):
     linkedin_username: str | None
     twitter_username: str | None
     instagram_username: str | None
+
+    @model_validator(mode="before")
+    @classmethod
+    def extract_relationships(cls, data: Any) -> Any:
+        if hasattr(data, "__dict__"):
+            result = {k: v for k, v in data.__dict__.items() if not k.startswith("_")}
+
+            # Add nested objects
+            if hasattr(data, "state") and data.state:
+                result["state"] = {"id": data.state.id, "name": data.state.name}
+            if hasattr(data, "city") and data.city:
+                result["city"] = {"id": data.city.id, "name": data.city.name}
+
+            return result
+        return data
 
     class Config:
         # Konfigurasi agar model dapat digunakan dengan ORM
@@ -202,10 +245,10 @@ class UserProfileCreate(UserProfileUpdateBase):
         "Non Participant", description="Type of participant."
     )
     # Location
-    # Di-handle dengan API, tapi tetap string
-    country: str = Field(..., description="User's country.")
-    state: Optional[str] = Field(None, description="User's state/province.")
-    city: Optional[str] = Field(None, description="User's city.")
+    # Di-handle dengan API menggunakan ID dari dropdown
+    country_id: int = Field(..., description="User's country ID.")
+    state_id: Optional[int] = Field(None, description="User's state/province ID.")
+    city_id: Optional[int] = Field(None, description="User's city ID.")
     zip_code: Optional[str] = Field(
         None, max_length=10, description="Postal or zip code."
     )
@@ -263,9 +306,9 @@ class UserProfileEditSuccessResponse(UserProfileDB):
                 "date_of_birth": "2025-09-29",
                 "phone": "+61",
                 "participant_type": "Non Participant",
-                "country": "ii",
-                "state": "string",
-                "city": "string",
+                "country_id": 102,
+                "state_id": 1836,
+                "city_id": 38932,
                 "zip_code": "string",
                 "address": "string",
                 "interest": ["string", "masokk pa eko"],
