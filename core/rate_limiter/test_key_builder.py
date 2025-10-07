@@ -1,12 +1,12 @@
 from typing import Optional
-import unittest
+from unittest import IsolatedAsyncioTestCase
 from unittest.mock import Mock
 import jwt
 from core.rate_limiter.key_builder import RateLimitKeyBuilder
 from settings import ALGORITHM, SECRET_KEY
 
 
-class TestRateLimitKeyBuilder(unittest.IsolatedAsyncioTestCase):
+class TestRateLimitKeyBuilder(IsolatedAsyncioTestCase):
     def setUp(self):
         self.builder = RateLimitKeyBuilder()
 
@@ -375,9 +375,7 @@ class TestRateLimitKeyBuilder(unittest.IsolatedAsyncioTestCase):
         request1 = self.create_mock_request(
             client_host="192.168.1.1", user_agent="Chrome"
         )
-        request2 = self.create_mock_request(
-            client_host="10.0.0.1", user_agent="Chrome"
-        )
+        request2 = self.create_mock_request(client_host="10.0.0.1", user_agent="Chrome")
 
         key1 = self.builder.build_anonymous_key(request1, use_fingerprint=True)
         key2 = self.builder.build_anonymous_key(request2, use_fingerprint=True)

@@ -82,30 +82,30 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             key, self.limit, self.window
         )
 
-        # Get remaining requests
-        remaining = await self.backend.get_remaining(key, self.limit)
-
         if not is_allowed:
             # Rate limit exceeded
             return JSONResponse(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                 content={
                     "detail": "Rate limit exceeded",
-                    "retry_after": retry_after,
                 },
                 headers={
                     "X-RateLimit-Limit": str(self.limit),
                     "X-RateLimit-Remaining": "0",
                     "X-RateLimit-Reset": str(retry_after),
+                    "Retry-After": str(int(retry_after or 0)),
                 },
             )
 
         # Process request
         response = await call_next(request)
 
+        # Get remaining requests AFTER processing (accurate count)
+        remaining = await self.backend.get_remaining(key, self.limit)
+
         # Add rate limit headers
         response.headers["X-RateLimit-Limit"] = str(self.limit)
-        response.headers["X-RateLimit-Remaining"] = str(remaining - 1)
+        response.headers["X-RateLimit-Remaining"] = str(remaining)
         response.headers["X-RateLimit-Window"] = str(self.window)
 
         return response
