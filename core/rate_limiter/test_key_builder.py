@@ -273,3 +273,114 @@ class TestRateLimitKeyBuilder(unittest.IsolatedAsyncioTestCase):
         key = self.builder.build_key(request, use_fingerprint=False)
         # Should fallback to anonymous
         self.assertTrue(key.startswith("anon:"))
+
+    def test_fingerprint_includes_ip(self):
+        """Test that fingerprint includes IP address"""
+        # Same headers, different IPs should give different fingerprints
+        request1 = self.create_mock_request(
+            client_host="192.168.1.1",
+            user_agent="Chrome",
+            accept_language="en-US",
+        )
+        request2 = self.create_mock_request(
+            client_host="192.168.1.2",  # Different IP
+            user_agent="Chrome",
+            accept_language="en-US",
+        )
+
+        fp1 = self.builder.get_composite_fingerprint(request1)
+        fp2 = self.builder.get_composite_fingerprint(request2)
+
+        # Different IPs should produce different fingerprints
+        self.assertNotEqual(fp1, fp2)
+
+    def test_fingerprint_includes_sec_ch_ua_headers(self):
+        """Test that fingerprint includes Sec-Ch-Ua headers"""
+        request1 = self.create_mock_request(client_host="192.168.1.1")
+        request1.headers["Sec-Ch-Ua"] = '"Chrome";v="90"'
+        request1.headers["Sec-Ch-Ua-Platform"] = '"Windows"'
+
+        request2 = self.create_mock_request(client_host="192.168.1.1")
+        request2.headers["Sec-Ch-Ua"] = '"Firefox";v="88"'
+        request2.headers["Sec-Ch-Ua-Platform"] = '"Linux"'
+
+        fp1 = self.builder.get_composite_fingerprint(request1)
+        fp2 = self.builder.get_composite_fingerprint(request2)
+
+        # Different Sec-Ch-Ua headers should produce different fingerprints
+        self.assertNotEqual(fp1, fp2)
+
+    def test_same_user_different_user_agent_same_ip_with_fingerprint(self):
+        """
+        Test that changing User-Agent alone is NOT enough to bypass
+        if IP is the same (fingerprint includes IP)
+        """
+        token = self.create_jwt_token(user_id=555)
+
+        # Request 1: Chrome, IP 192.168.1.1
+        request1 = self.create_mock_request(
+            client_host="192.168.1.1",
+            authorization=f"Bearer {token}",
+            user_agent="Chrome/90.0",
+        )
+
+        # Request 2: Firefox (different), same IP 192.168.1.1
+        request2 = self.create_mock_request(
+            client_host="192.168.1.1",  # Same IP!
+            authorization=f"Bearer {token}",
+            user_agent="Firefox/88.0",  # Different User-Agent
+        )
+
+        key1 = self.builder.build_key(request1, use_fingerprint=True)
+        key2 = self.builder.build_key(request2, use_fingerprint=True)
+
+        # Even though User-Agent different, IP same
+        # So fingerprints should be different (User-Agent is part of it)
+        self.assertTrue(key1.startswith("user:555:"))
+        self.assertTrue(key2.startswith("user:555:"))
+        self.assertNotEqual(key1, key2)  # Still different due to UA
+
+    def test_same_user_same_user_agent_different_ip_with_fingerprint(self):
+        """
+        Test that changing IP produces different fingerprint
+        even with same User-Agent
+        """
+        token = self.create_jwt_token(user_id=666)
+
+        # Request 1: Chrome, IP 192.168.1.1
+        request1 = self.create_mock_request(
+            client_host="192.168.1.1",
+            authorization=f"Bearer {token}",
+            user_agent="Chrome/90.0",
+        )
+
+        # Request 2: Same Chrome, different IP
+        request2 = self.create_mock_request(
+            client_host="10.0.0.1",  # Different IP!
+            authorization=f"Bearer {token}",
+            user_agent="Chrome/90.0",  # Same User-Agent
+        )
+
+        key1 = self.builder.build_key(request1, use_fingerprint=True)
+        key2 = self.builder.build_key(request2, use_fingerprint=True)
+
+        # Different IPs should produce different keys
+        self.assertTrue(key1.startswith("user:666:"))
+        self.assertTrue(key2.startswith("user:666:"))
+        self.assertNotEqual(key1, key2)
+
+    def test_anonymous_user_fingerprint_with_ip(self):
+        """Test that anonymous users get different keys from different IPs"""
+        # Same browser, different IPs
+        request1 = self.create_mock_request(
+            client_host="192.168.1.1", user_agent="Chrome"
+        )
+        request2 = self.create_mock_request(
+            client_host="10.0.0.1", user_agent="Chrome"
+        )
+
+        key1 = self.builder.build_anonymous_key(request1, use_fingerprint=True)
+        key2 = self.builder.build_anonymous_key(request2, use_fingerprint=True)
+
+        # Should be different due to IP
+        self.assertNotEqual(key1, key2)

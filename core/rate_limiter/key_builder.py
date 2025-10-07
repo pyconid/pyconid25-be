@@ -41,10 +41,14 @@ class RateLimitKeyBuilder:
         Create composite fingerprint from multiple request attributes
         This makes it harder to bypass by just changing IP
         """
+        client_ip = RateLimitKeyBuilder.get_real_client_ip(request)
         factors = [
             request.headers.get("User-Agent", ""),
             request.headers.get("Accept-Language", ""),
             request.headers.get("Accept-Encoding", ""),
+            request.headers.get("Sec-Ch-Ua", ""),
+            request.headers.get("Sec-Ch-Ua-Platform", ""),
+            client_ip,
         ]
 
         combined = "|".join(factors)
