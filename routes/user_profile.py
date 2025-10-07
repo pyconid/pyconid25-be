@@ -10,6 +10,8 @@ from schemas.user_profile import (
     IndustryCategory,
     JobCategory,
     LookingForOption,
+    ParticipantType,
+    ParticipantTypeDropdownResponse,
     TShirtSize,
     UserProfileCreate,
     UserProfileDB,
@@ -179,7 +181,10 @@ async def get_user_profile(user: User = Depends(get_current_user)):
     return user_schema
 
 
-@router.get("/options/industries", response_model=IndustryCategoryDropdownResponse)
+@router.get(
+    "/options/industries",
+    responses={"200": {"model": IndustryCategoryDropdownResponse}},
+)
 async def get_industry_options():
     items = [
         EnumDropdownItem(value=category.value, label=category.value)
@@ -188,10 +193,22 @@ async def get_industry_options():
     return IndustryCategoryDropdownResponse(results=items)
 
 
-@router.get("/options/jobs", response_model=JobCategoryDropdownResponse)
+@router.get("/options/jobs", responses={"200": {"model": JobCategoryDropdownResponse}})
 async def get_job_options():
     items = [
         EnumDropdownItem(value=category.value, label=category.value)
         for category in JobCategory
     ]
     return JobCategoryDropdownResponse(results=items)
+
+
+@router.get(
+    "/options/participation-types",
+    responses={"200": {"model": ParticipantTypeDropdownResponse}},
+)
+async def get_participant_type_options():
+    items = [
+        EnumDropdownItem(value=ptype.value, label=ptype.value)
+        for ptype in ParticipantType
+    ]
+    return ParticipantTypeDropdownResponse(results=items)

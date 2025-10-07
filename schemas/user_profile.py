@@ -28,6 +28,12 @@ class JobCategory(str, Enum):
     MARKETING = "Marketing"
 
 
+class ParticipantType(str, Enum):
+    NON_PARTICIPANT = "Non Participant"
+    NOT_USER_INPUT = "Not User Input"
+    HANDLED_BY_BACK_END = "Handled by Back End"
+
+
 class TShirtSize(str, Enum):
     S = "S"
     M = "M"
@@ -387,4 +393,8 @@ class IndustryCategoryDropdownResponse(BaseModel):
 
 
 class JobCategoryDropdownResponse(BaseModel):
+    results: List[EnumDropdownItem]
+
+
+class ParticipantTypeDropdownResponse(BaseModel):
     results: List[EnumDropdownItem]
