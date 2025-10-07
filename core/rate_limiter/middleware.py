@@ -87,7 +87,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             return JSONResponse(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                 content={
-                    "detail": "Rate limit exceeded",
+                    "message": "Rate limit exceeded",
                 },
                 headers={
                     "X-RateLimit-Limit": str(self.limit),
