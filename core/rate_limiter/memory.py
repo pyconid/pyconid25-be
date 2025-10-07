@@ -38,8 +38,12 @@ class InMemoryRateLimiter:
                 return True, None
 
             # Calculate retry_after
-            oldest_request = min(self._requests[key])
-            retry_after = window - (current_time - oldest_request)
+            if self._requests[key]:
+                oldest_request = min(self._requests[key])
+                retry_after = window - (current_time - oldest_request)
+            else:
+                # Edge case: limit is 0, no requests stored
+                retry_after = window
 
             return False, max(0, retry_after)
 
