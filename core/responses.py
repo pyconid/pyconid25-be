@@ -195,7 +195,9 @@ def common_response(res: HttpResponseAbstract):
     return res.response()
 
 
-def handle_http_exception(e: HTTPException) -> JSONResponse:
+def handle_http_exception(
+    e: HTTPException,
+) -> Union[None, JSONResponse, Response]:
     if e.status_code == 400:
         return common_response(BadRequest(message=e.detail))
     elif e.status_code == 401:
