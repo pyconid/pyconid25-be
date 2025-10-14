@@ -65,3 +65,11 @@ MAIL_FROM_NAME = os.environ.get("MAIL_FROM_NAME", "")
 MAIL_TLS = str_to_bool(os.environ.get("MAIL_TLS", "False"))
 MAIL_SSL = str_to_bool(os.environ.get("MAIL_SSL", "True"))
 USE_CREDENTIALS = str_to_bool(os.environ.get("USE_CREDENTIALS", "True"))
+
+# Mayar Payment Gateway conf
+MAYAR_API_KEY = os.environ.get("MAYAR_API_KEY", "")
+MAYAR_BASE_URL = os.environ.get("MAYAR_BASE_URL", "https://api.mayar.id")
+MAYAR_WEBHOOK_SECRET = os.environ.get("MAYAR_WEBHOOK_SECRET", "")
+MAYAR_PAYMENT_EXPIRE_HOURS = int(
+    os.environ.get("MAYAR_PAYMENT_EXPIRE_HOURS", default="1")
+)
