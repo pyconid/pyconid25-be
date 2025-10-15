@@ -199,6 +199,8 @@ class UserProfilePrivate(UserProfilePublic):
             result = {k: v for k, v in data.__dict__.items() if not k.startswith("_")}
 
             # Add nested objects
+            if hasattr(data, "country") and data.country:
+                result["country"] = {"id": data.country.id, "name": data.country.name}
             if hasattr(data, "state") and data.state:
                 result["state"] = {"id": data.state.id, "name": data.state.name}
             if hasattr(data, "city") and data.city:
