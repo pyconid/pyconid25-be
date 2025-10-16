@@ -203,6 +203,7 @@ async def list_payments(
             Ok(data=PaymentListResponse(results=results).model_dump(mode="json"))
         )
     except Exception as e:
+        traceback.print_exc()
         logger.error(f"Error in list_payments: {e}")
         return common_response(
             InternalServerError(error=f"Internal Server Error: {str(e)}")
@@ -295,6 +296,7 @@ async def get_payment_detail(
         )
 
     except Exception as e:
+        traceback.print_exc()
         logger.error(f"Error in get_payment_detail: {e}")
         return common_response(
             InternalServerError(error=f"Internal Server Error: {str(e)}")
@@ -366,6 +368,7 @@ async def payment_webhook(
 
         return common_response(Ok(data={"message": "Webhook processed successfully"}))
     except Exception as e:
+        traceback.print_exc()
         logger.error(f"Error in payment_webhook: {e}")
         return common_response(
             InternalServerError(error=f"Internal Server Error: {str(e)}")
