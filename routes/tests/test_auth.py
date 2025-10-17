@@ -1,6 +1,10 @@
 from unittest.mock import MagicMock, patch
 import alembic.config
 from unittest import IsolatedAsyncioTestCase
+from datetime import datetime, timedelta
+import jwt
+import secrets
+import pytz
 
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -10,6 +14,23 @@ from models import engine, db, get_db_sync, get_db_sync_for_test
 from models.Token import Token
 from models.User import User
 from main import app
+from settings import SECRET_KEY, ALGORITHM, FRONTEND_BASE_URL
+
+
+def create_test_oauth_state(redirect_uri=None, provider="github"):
+    """Helper function to create valid JWT state for testing"""
+    if redirect_uri is None:
+        redirect_uri = (
+            f"{FRONTEND_BASE_URL or 'http://localhost:3000'}/auth/{provider}/callback/"
+        )
+
+    payload = {
+        "redirect_uri": redirect_uri,
+        "nonce": secrets.token_urlsafe(16),
+        "exp": datetime.now(tz=pytz.timezone("UTC")) + timedelta(minutes=10),
+        "iat": datetime.now(tz=pytz.timezone("UTC")),
+    }
+    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
 
 class TestAuth(IsolatedAsyncioTestCase):
@@ -114,7 +135,7 @@ class TestAuth(IsolatedAsyncioTestCase):
 
         mock_oauth_client = MagicMock()
 
-        async def mock_authorize_access_token(request):
+        async def mock_fetch_access_token(code, redirect_uri=None):
             return {
                 "access_token": "github_access_token_123",
                 "refresh_token": "github_refresh_token_456",
@@ -122,7 +143,7 @@ class TestAuth(IsolatedAsyncioTestCase):
                 "scope": "user:email",
             }
 
-        mock_oauth_client.authorize_access_token = mock_authorize_access_token
+        mock_oauth_client.fetch_access_token = mock_fetch_access_token
 
         mock_user_response = MagicMock()
         mock_user_response.status_code = 200
@@ -149,9 +170,12 @@ class TestAuth(IsolatedAsyncioTestCase):
         mock_oauth = MagicMock()
         mock_oauth.github = mock_oauth_client
 
+        # Create valid JWT state for testing
+        valid_state = create_test_oauth_state(provider="github")
+
         with patch.object(github_service, "oauth", mock_oauth):
             response = client.post(
-                "/auth/github/verified/?code=auth_code&state=random_state"
+                f"/auth/github/verified/?code=auth_code&state={valid_state}"
             )
 
             self.assertEqual(response.status_code, 200)
@@ -187,7 +211,7 @@ class TestAuth(IsolatedAsyncioTestCase):
 
         mock_oauth_client = MagicMock()
 
-        async def mock_authorize_access_token(request):
+        async def mock_fetch_access_token(code, redirect_uri=None):
             return {
                 "access_token": "new_github_access_token",
                 "refresh_token": "new_github_refresh_token",
@@ -195,7 +219,7 @@ class TestAuth(IsolatedAsyncioTestCase):
                 "scope": "user:email",
             }
 
-        mock_oauth_client.authorize_access_token = mock_authorize_access_token
+        mock_oauth_client.fetch_access_token = mock_fetch_access_token
 
         mock_user_response = MagicMock()
         mock_user_response.status_code = 200
@@ -222,9 +246,12 @@ class TestAuth(IsolatedAsyncioTestCase):
         mock_oauth = MagicMock()
         mock_oauth.github = mock_oauth_client
 
+        # Create valid JWT state for testing
+        valid_state = create_test_oauth_state(provider="github")
+
         with patch.object(github_service, "oauth", mock_oauth):
             response = client.post(
-                "/auth/github/verified/?code=auth_code&state=random_state"
+                f"/auth/github/verified/?code=auth_code&state={valid_state}"
             )
             print(response.json())
 
@@ -254,17 +281,20 @@ class TestAuth(IsolatedAsyncioTestCase):
 
         mock_oauth_client = MagicMock()
 
-        async def mock_authorize_access_token_fail(request):
+        async def mock_fetch_access_token_fail(**kwargs):
             raise Exception("Token exchange failed")
 
-        mock_oauth_client.authorize_access_token = mock_authorize_access_token_fail
+        mock_oauth_client.fetch_access_token = mock_fetch_access_token_fail
 
         mock_oauth = MagicMock()
         mock_oauth.github = mock_oauth_client
 
+        # Create valid JWT state for testing
+        valid_state = create_test_oauth_state(provider="github")
+
         with patch.object(github_service, "oauth", mock_oauth):
             response = client.post(
-                "/auth/github/verified/?code=invalid_code&state=random_state"
+                f"/auth/github/verified/?code=invalid_code&state={valid_state}"
             )
 
             self.assertEqual(response.status_code, 400)
@@ -280,10 +310,10 @@ class TestAuth(IsolatedAsyncioTestCase):
 
         mock_oauth_client = MagicMock()
 
-        async def mock_authorize_access_token(request):
+        async def mock_fetch_access_token(**kwargs):
             return {"access_token": "github_access_token_123", "token_type": "bearer"}
 
-        mock_oauth_client.authorize_access_token = mock_authorize_access_token
+        mock_oauth_client.fetch_access_token = mock_fetch_access_token
 
         async def mock_get_fail(url, token=None):
             mock_response = MagicMock()
@@ -296,9 +326,12 @@ class TestAuth(IsolatedAsyncioTestCase):
         mock_oauth = MagicMock()
         mock_oauth.github = mock_oauth_client
 
+        # Create valid JWT state for testing
+        valid_state = create_test_oauth_state(provider="github")
+
         with patch.object(github_service, "oauth", mock_oauth):
             response = client.post(
-                "/auth/github/verified/?code=auth_code&state=random_state"
+                f"/auth/github/verified/?code=auth_code&state={valid_state}"
             )
 
             self.assertEqual(response.status_code, 400)
@@ -329,7 +362,7 @@ class TestAuth(IsolatedAsyncioTestCase):
 
         mock_oauth_client = MagicMock()
 
-        async def mock_authorize_access_token(request):
+        async def mock_fetch_access_token(code, redirect_uri=None):
             return {
                 "access_token": "google_access_token_123",
                 "refresh_token": "google_refresh_token_456",
@@ -337,7 +370,7 @@ class TestAuth(IsolatedAsyncioTestCase):
                 "scope": "openid email profile",
             }
 
-        mock_oauth_client.authorize_access_token = mock_authorize_access_token
+        mock_oauth_client.fetch_access_token = mock_fetch_access_token
 
         mock_user_response = MagicMock()
         mock_user_response.status_code = 200
@@ -359,9 +392,12 @@ class TestAuth(IsolatedAsyncioTestCase):
         mock_oauth = MagicMock()
         mock_oauth.google = mock_oauth_client
 
+        # Create valid JWT state for testing
+        valid_state = create_test_oauth_state(provider="google")
+
         with patch.object(google_service, "oauth", mock_oauth):
             response = client.post(
-                "/auth/google/verified/?code=auth_code&state=random_state"
+                f"/auth/google/verified/?code=auth_code&state={valid_state}"
             )
 
             self.assertEqual(response.status_code, 200)
@@ -397,7 +433,7 @@ class TestAuth(IsolatedAsyncioTestCase):
 
         mock_oauth_client = MagicMock()
 
-        async def mock_authorize_access_token(request):
+        async def mock_fetch_access_token(code, redirect_uri=None):
             return {
                 "access_token": "new_google_access_token",
                 "refresh_token": "new_google_refresh_token",
@@ -405,7 +441,7 @@ class TestAuth(IsolatedAsyncioTestCase):
                 "scope": "openid email profile",
             }
 
-        mock_oauth_client.authorize_access_token = mock_authorize_access_token
+        mock_oauth_client.fetch_access_token = mock_fetch_access_token
 
         mock_user_response = MagicMock()
         mock_user_response.status_code = 200
@@ -427,9 +463,12 @@ class TestAuth(IsolatedAsyncioTestCase):
         mock_oauth = MagicMock()
         mock_oauth.google = mock_oauth_client
 
+        # Create valid JWT state for testing
+        valid_state = create_test_oauth_state(provider="google")
+
         with patch.object(google_service, "oauth", mock_oauth):
             response = client.post(
-                "/auth/google/verified/?code=auth_code&state=random_state"
+                f"/auth/google/verified/?code=auth_code&state={valid_state}"
             )
 
             self.assertEqual(response.status_code, 200)
@@ -458,17 +497,20 @@ class TestAuth(IsolatedAsyncioTestCase):
 
         mock_oauth_client = MagicMock()
 
-        async def mock_authorize_access_token_fail(request):
+        async def mock_fetch_access_token_fail(code, redirect_uri=None):
             raise Exception("Token exchange failed")
 
-        mock_oauth_client.authorize_access_token = mock_authorize_access_token_fail
+        mock_oauth_client.fetch_access_token = mock_fetch_access_token_fail
 
         mock_oauth = MagicMock()
         mock_oauth.google = mock_oauth_client
 
+        # Create valid JWT state for testing
+        valid_state = create_test_oauth_state(provider="google")
+
         with patch.object(google_service, "oauth", mock_oauth):
             response = client.post(
-                "/auth/google/verified/?code=invalid_code&state=random_state"
+                f"/auth/google/verified/?code=invalid_code&state={valid_state}"
             )
 
             self.assertEqual(response.status_code, 400)
@@ -484,10 +526,10 @@ class TestAuth(IsolatedAsyncioTestCase):
 
         mock_oauth_client = MagicMock()
 
-        async def mock_authorize_access_token(request):
+        async def mock_fetch_access_token(code, redirect_uri=None):
             return {"access_token": "google_access_token_123", "token_type": "bearer"}
 
-        mock_oauth_client.authorize_access_token = mock_authorize_access_token
+        mock_oauth_client.fetch_access_token = mock_fetch_access_token
 
         async def mock_get_fail(url, token=None):
             mock_response = MagicMock()
@@ -500,9 +542,12 @@ class TestAuth(IsolatedAsyncioTestCase):
         mock_oauth = MagicMock()
         mock_oauth.google = mock_oauth_client
 
+        # Create valid JWT state for testing
+        valid_state = create_test_oauth_state(provider="google")
+
         with patch.object(google_service, "oauth", mock_oauth):
             response = client.post(
-                "/auth/google/verified/?code=auth_code&state=random_state"
+                f"/auth/google/verified/?code=auth_code&state={valid_state}"
             )
 
             self.assertEqual(response.status_code, 400)
@@ -519,14 +564,14 @@ class TestAuth(IsolatedAsyncioTestCase):
 
         mock_oauth_client = MagicMock()
 
-        async def mock_authorize_access_token(request):
+        async def mock_fetch_access_token(code, redirect_uri=None):
             return {
                 "access_token": "google_access_token_123",
                 "token_type": "bearer",
                 "scope": "openid email profile",
             }
 
-        mock_oauth_client.authorize_access_token = mock_authorize_access_token
+        mock_oauth_client.fetch_access_token = mock_fetch_access_token
 
         # Mock untuk endpoint pertama gagal, kedua berhasil
         first_response = MagicMock()
@@ -559,9 +604,12 @@ class TestAuth(IsolatedAsyncioTestCase):
         mock_oauth = MagicMock()
         mock_oauth.google = mock_oauth_client
 
+        # Create valid JWT state for testing
+        valid_state = create_test_oauth_state(provider="google")
+
         with patch.object(google_service, "oauth", mock_oauth):
             response = client.post(
-                "/auth/google/verified/?code=auth_code&state=random_state"
+                f"/auth/google/verified/?code=auth_code&state={valid_state}"
             )
 
             self.assertEqual(response.status_code, 200)
