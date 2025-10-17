@@ -1,13 +1,15 @@
-from datetime import datetime
+from datetime import datetime, timedelta
+import secrets
 import traceback
 from abc import ABC, abstractmethod
 from typing import Optional, Tuple, TypedDict, Union
 from fastapi import HTTPException, Request
 from fastapi.responses import RedirectResponse
+import jwt
 import pytz
 from sqlalchemy import or_, select
 from models.User import User
-from settings import FRONTEND_BASE_URL, TZ
+from settings import ALGORITHM, FRONTEND_BASE_URL, SECRET_KEY, TZ
 from authlib.integrations.starlette_client import OAuth
 from sqlalchemy.orm import Session
 
@@ -76,6 +78,24 @@ class BaseOAuthService(ABC):
         """Set provider-specific fields untuk user baru"""
         pass
 
+    def _create_oauth_state(self, redirect_uri: Optional[str] = None) -> str:
+        payload = {
+            "redirect_uri": redirect_uri,
+            "nonce": secrets.token_urlsafe(16),
+            "exp": datetime.now(tz=pytz.timezone("UTC")) + timedelta(minutes=10),
+            "iat": datetime.now(tz=pytz.timezone("UTC")),
+        }
+        return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+
+    def _verify_oauth_state(self, state: str) -> dict:
+        try:
+            payload = jwt.decode(state, SECRET_KEY, algorithms=[ALGORITHM])
+            return payload
+        except jwt.ExpiredSignatureError:
+            raise HTTPException(status_code=400, detail="OAuth state expired")
+        except jwt.InvalidTokenError:
+            raise HTTPException(status_code=400, detail="Invalid OAuth state")
+
     async def initiate_oauth(
         self, request: Request, follow_redirect: Optional[bool] = False
     ) -> Union[RedirectResponse, str]:
@@ -102,16 +122,20 @@ class BaseOAuthService(ABC):
                 f"{FRONTEND_BASE_URL.rstrip('/')}/auth/{provider_name}/callback/"
             )
 
+            state = self._create_oauth_state(redirect_uri=redirect_uri)
+
             if follow_redirect:
-                return await client.authorize_redirect(request, redirect_uri)
+                return await client.authorize_redirect(
+                    request, redirect_uri, state=state
+                )
 
-            authorization_url = await client.create_authorization_url(redirect_uri)
-            await client.save_authorize_data(
-                request, redirect_uri=redirect_uri, **authorization_url
+            authorization_url = await client.create_authorization_url(
+                redirect_uri, state=state
             )
-
+            # await client.save_authorize_data(
+            #     request, redirect_uri=redirect_uri, **authorization_url
+            # )
             return authorization_url.get("url", None)
-
         except Exception as e:
             traceback.print_exc()
             raise HTTPException(
@@ -137,10 +161,26 @@ class BaseOAuthService(ABC):
             )
 
         client = getattr(self.oauth, provider_name)
+        code = request.query_params.get("code")
+        state = request.query_params.get("state")
+
+        if not code or not state:
+            raise HTTPException(
+                status_code=400,
+                detail="Missing 'code' or 'state' in OAuth callback request",
+            )
+
+        try:
+            state_payload = self._verify_oauth_state(state)
+            redirect_uri = state_payload.get("redirect_uri")
+        except HTTPException as e:
+            raise e
 
         try:
             # Get access token
-            token = await client.authorize_access_token(request)
+            token = await client.fetch_access_token(
+                code=code, redirect_uri=redirect_uri
+            )
 
             # Get user info from provider
             user_info = await self._get_user_info(client, token)
