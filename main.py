@@ -10,17 +10,19 @@ from routes.locations import router as locations_router
 from starlette.middleware.sessions import SessionMiddleware
 from routes.ticket import router as ticket_router
 
-from settings import SECRET_KEY
+from settings import SECRET_KEY, DEPLOYMENT_MODE
 
 health_check()
-
 
 app = FastAPI(title="PyconId 2025 BE")
 
 app.add_middleware(
     SessionMiddleware,
     secret_key=SECRET_KEY,
-    same_site="lax",
+    session_cookie="pycon_session",
+    path="/",
+    same_site="none",
+    https_only=DEPLOYMENT_MODE == "production",
     max_age=1800,
 )
 app.add_middleware(

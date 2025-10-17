@@ -24,9 +24,12 @@ def str_to_bool(string: str) -> bool:
 # Environtment
 ENVIRONTMENT = os.environ.get("ENVIRONTMENT")
 
+# Deployment mode
+DEPLOYMENT_MODE = os.environ.get("DEPLOYMENT_MODE", "development")
+
 # JWT conf
 JWT_PREFIX = os.environ.get("JWT_PREFIX", "Bearer")
-SECRET_KEY = os.environ.get("SECRET_KEY")
+SECRET_KEY = os.environ.get("SECRET_KEY", "pyconid25_secret")
 ALGORITHM = os.environ.get("ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = os.environ.get("ACCESS_TOKEN_EXPIRE_MINUTES", 30)
 if ACCESS_TOKEN_EXPIRE_MINUTES is not None:
