@@ -132,9 +132,6 @@ class BaseOAuthService(ABC):
             authorization_url = await client.create_authorization_url(
                 redirect_uri, state=state
             )
-            # await client.save_authorize_data(
-            #     request, redirect_uri=redirect_uri, **authorization_url
-            # )
             return authorization_url.get("url", None)
         except Exception as e:
             traceback.print_exc()
