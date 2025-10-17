@@ -24,9 +24,6 @@ def str_to_bool(string: str) -> bool:
 # Environtment
 ENVIRONTMENT = os.environ.get("ENVIRONTMENT")
 
-# Deployment mode
-DEPLOYMENT_MODE = os.environ.get("DEPLOYMENT_MODE", "development")
-
 # JWT conf
 JWT_PREFIX = os.environ.get("JWT_PREFIX", "Bearer")
 SECRET_KEY = os.environ.get("SECRET_KEY", "pyconid25_secret")
