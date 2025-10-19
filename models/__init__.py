@@ -61,3 +61,4 @@ from models.RefreshToken import RefreshToken  # NOQA
 from models.Ticket import Ticket  # NOQA
 from models.EmailVerification import EmailVerification  # NOQA
 from models.ResetPassword import ResetPassword  # NOQA
+from models.Payment import Payment  # NOQA
