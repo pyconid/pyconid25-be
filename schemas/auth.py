@@ -8,6 +8,11 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class LoginEmailRequest(BaseModel):
+    email: str
+    password: str
+
+
 class LoginSuccessResponse(BaseModel):
     id: str
     username: str
@@ -22,6 +27,33 @@ class MeResponse(BaseModel):
 
 
 class LogoutSuccessResponse(BaseModel):
+    message: str
+
+
+class SignUpRequest(BaseModel):
+    email: str
+    username: str
+    password: str
+
+
+class EmailVerifiedSuccessResponse(BaseModel):
+    message: str
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+
+class ForgotPasswordSuccessResponse(BaseModel):
+    message: str
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+
+
+class ResetPasswordSuccessResponse(BaseModel):
     message: str
 
 
@@ -41,3 +73,17 @@ class GithubVerifiedResponse(BaseModel):
     refresh_token: str
     is_new_user: bool
     github_username: str
+
+
+class GoogleSignInResponse(BaseModel):
+    redirect: str
+
+
+class GoogleVerifiedResponse(BaseModel):
+    id: str
+    username: str
+    is_active: bool
+    token: str
+    refresh_token: str
+    is_new_user: bool
+    google_email: str

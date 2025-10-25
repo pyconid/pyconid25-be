@@ -1,26 +1,26 @@
-name: Formating, Linting and Testing Python package
+name: CI/CD Pipeline
 
-on: [push, pull_request]
+on: 
+  push:
+    branches: [main, dev]
+  pull_request:
+  workflow_dispatch: {}
 
 jobs:
-  build:
+  format-lint-test:
+    name: Format, Lint and Test
     runs-on: ubuntu-latest
     services:
-      # Label used to access the service container
       postgres:
-        # Docker Hub image
         image: postgres
-        # Provide the password for postgres
         env:
           POSTGRES_PASSWORD: postgres
-        # Set health checks to wait until postgres has started
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
         ports:
-          # Maps tcp port 5432 on service container to the host
           - 5432:5432
     strategy:
       matrix:
@@ -32,7 +32,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      # You can test your matrix by printing the current Python version
       - name: Display Python version
         run: python -c "import sys; print(sys.version)"
       - name: Install dependencies
@@ -45,7 +44,7 @@ jobs:
         run: ruff check --exit-non-zero-on-fix
       - name: Test with pytest
         env:
-          ENVIRONTMENT: os
+          ENVIRONMENT: os
           CORS_ALLOWED_ORIGINS: http://127.0.0.1/,https://www.google.com/,https://fastapi.tiangolo.com/
           SECRET_KEY: githubtest
           ALGORITHM: HS256
@@ -60,3 +59,190 @@ jobs:
         run: |
           alembic upgrade head
           pytest . -n auto
+
+  docker-build:
+    name: Build Docker Image
+    needs: format-lint-test
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    env:
+      REGISTRY: ghcr.io
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read version
+        id: version
+        run: echo "version=$(cat version.txt)" >> $GITHUB_OUTPUT
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        run: echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USERNAME }}" --password-stdin
+
+      - name: Generate .env file (dev)
+        if: ${{ github.ref_name == 'dev' }}
+        run: printf "%s" "${{ secrets.DEV_ENV_FILE }}" > .env
+      
+      - name: Generate .env file (prod)
+        if: ${{ github.ref_name == 'main' || startsWith(github.ref, 'refs/tags/v') }}
+        run: printf "%s" "${{ secrets.PROD_ENV_FILE }}" > .env
+      
+      - name: Load IMAGE_NAME from .env
+        run: |
+          IMAGE_NAME=$(grep '^IMAGE_NAME=' .env | cut -d'=' -f2)
+          echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV
+      
+      - name: Load GHCR_USERNAME from .env
+        run: |
+          GHCR_USERNAME=$(grep '^GHCR_USERNAME=' .env | cut -d'=' -f2)
+          echo "GHCR_USERNAME=$GHCR_USERNAME" >> $GITHUB_ENV
+
+      - name: Build Docker image
+        run: |
+          docker build \
+            -t ghcr.io/${GHCR_USERNAME}/${IMAGE_NAME}:${{ steps.version.outputs.version }} \
+            -t ghcr.io/${GHCR_USERNAME}/${IMAGE_NAME}:latest \
+            .
+
+      - name: Push Docker image
+        run: |
+          docker push ghcr.io/${GHCR_USERNAME}/${IMAGE_NAME}:${{ steps.version.outputs.version }}
+          docker push ghcr.io/${GHCR_USERNAME}/${IMAGE_NAME}:latest
+
+      - name: Logout Docker
+        run: docker logout ghcr.io
+
+  deploy-dev:
+    name: Deploy to Development
+    needs: [docker-build]
+    if: ${{ github.ref_name == 'dev' }}
+    runs-on: ubuntu-latest
+    environment:
+      name: development
+      url: https://dev-api.pycon.id
+
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Read version
+        id: version
+        run: echo "version=$(cat version.txt)" >> $GITHUB_OUTPUT
+        
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.7.0
+        with:
+          ssh-private-key: ${{ secrets.DEV_SSH_PRIVATE_KEY }}
+          
+      - name: Setup known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEV_SSH_KNOWN_HOSTS }}" >> ~/.ssh/known_hosts
+      
+      - name: Copy docker-compose.yaml and version.txt to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DEV_SSH_HOST }}
+          username: ${{ secrets.DEV_SSH_USER }}
+          port: ${{ secrets.DEV_SSH_PORT || '22' }}
+          key: ${{ secrets.DEV_SSH_PRIVATE_KEY }}
+          source: "docker-compose.yaml,version.txt"
+          target: /home/${{ secrets.DEV_SSH_USER }}/pyconid25-be-dev/
+          overwrite: true
+
+      - name: SSH - Generate .env file dari secret
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEV_SSH_HOST }}
+          username: ${{ secrets.DEV_SSH_USER }}
+          port: ${{ secrets.DEV_SSH_PORT || '22' }}
+          key: ${{ secrets.DEV_SSH_PRIVATE_KEY }}
+          script: |
+            cd ~/pyconid25-be-dev
+            echo "${{ secrets.DEV_ENV_FILE }}" > .env
+            chmod 644 .env
+
+            # Update IMAGE_TAG di .env sesuai version.txt
+            VERSION=$(cat version.txt)
+            if grep -q '^IMAGE_TAG=' .env; then
+              sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=$VERSION/" .env
+            else
+              echo "IMAGE_TAG=$VERSION" >> .env
+            fi
+
+            # Login ke GHCR pakai akun premium
+            echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USERNAME }}" --password-stdin
+
+            # Pull dan deploy
+            docker compose --env-file .env pull
+            docker compose --env-file .env up -d
+
+  deploy-prod:
+    name: Deploy to Production
+    needs: [docker-build]
+    if: ${{ github.ref_name == 'main' || startsWith(github.ref, 'refs/tags/v') }}
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://api.pycon.id
+
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Read version
+        id: version
+        run: echo "version=$(cat version.txt)" >> $GITHUB_OUTPUT
+        
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.7.0
+        with:
+          ssh-private-key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
+          
+      - name: Setup known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.PROD_SSH_KNOWN_HOSTS }}" >> ~/.ssh/known_hosts
+      
+      - name: Copy docker-compose.yaml and version.txt to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.PROD_SSH_HOST }}
+          username: ${{ secrets.PROD_SSH_USER }}
+          port: ${{ secrets.PROD_SSH_PORT || '22' }}
+          key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
+          source: |
+            docker-compose.yaml
+            version.txt
+          target: /home/${{ secrets.PROD_SSH_USER }}/pyconid25-be-prod/
+          overwrite: true
+
+      - name: SSH - Generate .env file dari secret
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.PROD_SSH_HOST }}
+          username: ${{ secrets.PROD_SSH_USER }}
+          port: ${{ secrets.PROD_SSH_PORT || '22' }}
+          key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
+          script: |
+            cd ~/pyconid25-be-prod
+            echo "${{ secrets.PROD_ENV_FILE }}" > .env
+            chmod 644 .env
+
+            # Update IMAGE_TAG di .env sesuai version.txt
+            VERSION=$(cat version.txt)
+            if grep -q '^IMAGE_TAG=' .env; then
+              sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=$VERSION/" .env
+            else
+              echo "IMAGE_TAG=$VERSION" >> .env
+            fi
+
+            # Login ke GHCR pakai akun premium
+            echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USERNAME }}" --password-stdin
+
+            # Pull dan deploy
+            docker compose --env-file .env pull
+            docker compose --env-file .env up -d
