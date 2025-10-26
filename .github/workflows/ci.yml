@@ -105,14 +105,14 @@ jobs:
       - name: Build Docker image
         run: |
           docker build \
-            -t ghcr.io/${GHCR_USERNAME}/${IMAGE_NAME}:${{ steps.version.outputs.version }} \
-            -t ghcr.io/${GHCR_USERNAME}/${IMAGE_NAME}:latest \
+            -t ghcr.io/${{ env.GHCR_USERNAME }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }} \
+            -t ghcr.io/${{ env.GHCR_USERNAME }}/${{ env.IMAGE_NAME }}:latest \
             .
 
       - name: Push Docker image
         run: |
-          docker push ghcr.io/${GHCR_USERNAME}/${IMAGE_NAME}:${{ steps.version.outputs.version }}
-          docker push ghcr.io/${GHCR_USERNAME}/${IMAGE_NAME}:latest
+          docker push ghcr.io/${{ env.GHCR_USERNAME }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}
+          docker push ghcr.io/${{ env.GHCR_USERNAME }}/${{ env.IMAGE_NAME }}:latest
 
       - name: Logout Docker
         run: docker logout ghcr.io
