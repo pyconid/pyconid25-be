@@ -10,14 +10,20 @@ from schemas.user_profile import (
     IndustryCategory,
     JobCategory,
     LookingForOption,
+    ParticipantType,
+    ParticipantTypeDropdownResponse,
     TShirtSize,
     UserProfileCreate,
     UserProfileDB,
     UserProfileEditSuccessResponse,
     UserProfilePrivate,
+    EnumDropdownItem,
+    IndustryCategoryDropdownResponse,
+    JobCategoryDropdownResponse,
 )
 from sqlalchemy.orm import Session
 from core.responses import (
+    BadRequest,
     InternalServerError,
     common_response,
     Unauthorized,
@@ -27,11 +33,13 @@ from core.security import (
 )
 from models import get_db_sync
 from schemas.common import (
+    BadRequestResponse,
     InternalServerErrorResponse,
     UnauthorizedResponse,
     ValidationErrorResponse,
 )
 from repository import user as userRepo
+from validators.location import LocationValidationError, validate_location_hierarchy
 
 router = APIRouter(prefix="/user-profile", tags=["UserProfile"])
 
@@ -42,6 +50,7 @@ router = APIRouter(prefix="/user-profile", tags=["UserProfile"])
     "/",
     responses={
         "200": {"model": UserProfileEditSuccessResponse},
+        "400": {"model": BadRequestResponse},
         "422": {"model": ValidationErrorResponse},
         "500": {"model": InternalServerErrorResponse},
     },
@@ -60,9 +69,9 @@ async def update_user_profile(
     gender: Optional[Gender] = Form(None),
     date_of_birth: Optional[date] = Form(None),
     phone: Optional[str] = Form(None),
-    country: str = Form(...),
-    state: Optional[str] = Form(None),
-    city: Optional[str] = Form(None),
+    country_id: int = Form(...),
+    state_id: Optional[int] = Form(None),
+    city_id: Optional[int] = Form(None),
     zip_code: Optional[str] = Form(None),
     address: Optional[str] = Form(None),
     bio: str = Form(...),
@@ -84,6 +93,18 @@ async def update_user_profile(
     if user is None:
         return common_response(Unauthorized(message="Unauthorized"))
 
+    if country_id:
+        try:
+            validate_location_hierarchy(
+                db=db,
+                country_id=country_id,
+                state_id=state_id,
+                city_id=city_id,
+                zip_code=zip_code,
+            )
+        except LocationValidationError as e:
+            return common_response(BadRequest(message=str(e)))
+
     # semua field dari UserProfileCreate.
     user_profile_pydantic = UserProfileCreate(
         first_name=first_name,
@@ -98,9 +119,9 @@ async def update_user_profile(
         gender=gender,
         date_of_birth=date_of_birth,
         phone=phone,
-        country=country,
-        state=state,
-        city=city,
+        country_id=country_id,
+        state_id=state_id,
+        city_id=city_id,
         zip_code=zip_code,
         address=address,
         bio=bio,
@@ -158,3 +179,36 @@ async def get_user_profile(user: User = Depends(get_current_user)):
         return common_response(Unauthorized(message="Unauthorized"))
     user_schema = UserProfilePrivate.model_validate(user)
     return user_schema
+
+
+@router.get(
+    "/options/industries",
+    responses={"200": {"model": IndustryCategoryDropdownResponse}},
+)
+async def get_industry_options():
+    items = [
+        EnumDropdownItem(value=category.value, label=category.value)
+        for category in IndustryCategory
+    ]
+    return IndustryCategoryDropdownResponse(results=items)
+
+
+@router.get("/options/jobs", responses={"200": {"model": JobCategoryDropdownResponse}})
+async def get_job_options():
+    items = [
+        EnumDropdownItem(value=category.value, label=category.value)
+        for category in JobCategory
+    ]
+    return JobCategoryDropdownResponse(results=items)
+
+
+@router.get(
+    "/options/participation-types",
+    responses={"200": {"model": ParticipantTypeDropdownResponse}},
+)
+async def get_participant_type_options():
+    items = [
+        EnumDropdownItem(value=ptype.value, label=ptype.value)
+        for ptype in ParticipantType
+    ]
+    return ParticipantTypeDropdownResponse(results=items)

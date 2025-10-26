@@ -5,6 +5,9 @@ from unittest import IsolatedAsyncioTestCase
 from fastapi.testclient import TestClient
 from core.security import generate_hash_password
 from models import engine, db, get_db_sync, get_db_sync_for_test
+from models.City import City
+from models.Country import Country
+from models.State import State
 from models.User import User
 from main import app
 from schemas.user_profile import (
@@ -37,6 +40,10 @@ class TestUserProfile(IsolatedAsyncioTestCase):
             is_active=True,
         )
         self.db.add(new_user)
+
+        dummy_country = Country(id=1, name="Indonesia", iso2="ID", iso3="IDN")
+        self.db.merge(dummy_country)
+
         self.db.commit()
         app.dependency_overrides[get_db_sync] = get_db_sync_for_test(db=self.db)
         client = TestClient(app)
@@ -58,7 +65,7 @@ class TestUserProfile(IsolatedAsyncioTestCase):
                 "bio": "A creative designer focused on user experience and interface design.",
                 "job_category": "Design",
                 "job_title": "UI/UX Designer",
-                "country": "Indonesia",
+                "country_id": 1,
                 "interest": "figma, design thinking, user research",  # Akan diubah jadi list
                 "coc_acknowledged": True,
                 "terms_agreed": True,
@@ -82,7 +89,7 @@ class TestUserProfile(IsolatedAsyncioTestCase):
                 "bio": "Too short",  # Bio terlalu pendek (min_length=10)
                 "job_category": "Tech - Specialist",
                 "job_title": "Developer",
-                "country": "Indonesia",
+                "country_id": 1,
                 "phone": "081234567890",  # Format telepon salah
                 "github_username": "https://github.com/andipratama",  # Seharusnya username saja
                 "coc_acknowledged": False,  # Harus True
@@ -154,6 +161,179 @@ class TestUserProfile(IsolatedAsyncioTestCase):
         self.assertIn("terms_agreed", response.json())
         self.assertIn("privacy_agreed", response.json())
 
+    async def test_update_profile_with_valid_location(self):
+        """Test update user profile dengan location hierarchy yang valid"""
+        # Given
+        new_user = User(
+            username="testuser",
+            email="testuser@local.com",
+            password=generate_hash_password("password"),
+            is_active=True,
+        )
+        self.db.add(new_user)
+
+        country = Country(id=102, name="Indonesia", iso2="ID", iso3="IDN")
+        self.db.merge(country)
+
+        state = State(id=1836, name="Jakarta", country_id=102, country_code="ID")
+        self.db.merge(state)
+
+        city = City(id=38932, name="Jakarta Pusat", state_id=1836, country_id=102)
+        self.db.merge(city)
+
+        self.db.commit()
+        app.dependency_overrides[get_db_sync] = get_db_sync_for_test(db=self.db)
+
+        client = TestClient(app)
+        response = client.post(
+            "/auth/email/signin/",
+            json={"email": "testuser@local.com", "password": "password"},
+        )
+        token = response.json().get("token", None)
+
+        # When
+        response = client.put(
+            "/user-profile/",
+            headers={"Authorization": f"Bearer {token}"},
+            files={"profile_picture": ("profile.jpg", b"filecontent")},
+            data={
+                "first_name": "Budi",
+                "last_name": "Santoso",
+                "email": "budi@email.com",
+                "bio": "Software engineer with 5 years experience.",
+                "job_category": "Tech - Specialist",
+                "job_title": "Backend Developer",
+                "country_id": 102,  # Indonesia
+                "state_id": 1836,  # Jakarta
+                "city_id": 38932,  # Jakarta Pusat
+                "interest": "python, fastapi",
+                "coc_acknowledged": True,
+                "terms_agreed": True,
+                "privacy_agreed": True,
+            },
+        )
+
+        # Expect
+        self.assertEqual(response.status_code, 200)
+
+    async def test_update_profile_with_invalid_country(self):
+        # Given
+        new_user = User(
+            username="testuser",
+            email="testuser@local.com",
+            password=generate_hash_password("password"),
+            is_active=True,
+        )
+        self.db.add(new_user)
+
+        country = Country(id=102, name="Indonesia", iso2="ID", iso3="IDN")
+        self.db.merge(country)
+
+        state = State(id=1836, name="Jakarta", country_id=102, country_code="ID")
+        self.db.merge(state)
+
+        city = City(id=38932, name="Jakarta Pusat", state_id=1836, country_id=102)
+        self.db.merge(city)
+
+        self.db.commit()
+
+        app.dependency_overrides[get_db_sync] = get_db_sync_for_test(db=self.db)
+
+        client = TestClient(app)
+        response = client.post(
+            "/auth/email/signin/",
+            json={"email": "testuser@local.com", "password": "password"},
+        )
+        token = response.json().get("token", None)
+
+        # When
+        response = client.put(
+            "/user-profile/",
+            headers={"Authorization": f"Bearer {token}"},
+            files={"profile_picture": ("profile.jpg", b"filecontent")},
+            data={
+                "first_name": "Budi",
+                "last_name": "Santoso",
+                "email": "budi@email.com",
+                "bio": "Software engineer with 5 years experience.",
+                "job_category": "Tech - Specialist",
+                "job_title": "Backend Developer",
+                "country_id": 999,  # Invalid country!
+                "interest": "python, fastapi",
+                "coc_acknowledged": True,
+                "terms_agreed": True,
+                "privacy_agreed": True,
+            },
+        )
+
+        # Expect
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("Invalid country_id", response.json()["message"])
+
+    async def test_update_profile_with_mismatched_state(self):
+        # Given
+        new_user = User(
+            username="testuser",
+            email="testuser@local.com",
+            password=generate_hash_password("password"),
+            is_active=True,
+        )
+        self.db.add(new_user)
+
+        country = Country(id=102, name="Indonesia", iso2="ID", iso3="IDN")
+        self.db.merge(country)
+
+        state = State(id=1836, name="Jakarta", country_id=102, country_code="ID")
+        self.db.merge(state)
+
+        city = City(id=38932, name="Jakarta Pusat", state_id=1836, country_id=102)
+        self.db.merge(city)
+
+        self.db.commit()
+
+        # Add USA state
+        usa_country = Country(id=231, name="United States", iso2="US", iso3="USA")
+        self.db.merge(usa_country)
+        california = State(
+            id=1416, name="California", country_id=231, country_code="US"
+        )
+        self.db.merge(california)
+        self.db.commit()
+
+        app.dependency_overrides[get_db_sync] = get_db_sync_for_test(db=self.db)
+
+        client = TestClient(app)
+        response = client.post(
+            "/auth/email/signin/",
+            json={"email": "testuser@local.com", "password": "password"},
+        )
+        token = response.json().get("token", None)
+
+        # When
+        response = client.put(
+            "/user-profile/",
+            headers={"Authorization": f"Bearer {token}"},
+            files={"profile_picture": ("profile.jpg", b"filecontent")},
+            data={
+                "first_name": "Budi",
+                "last_name": "Santoso",
+                "email": "budi@email.com",
+                "bio": "Software engineer with 5 years experience.",
+                "job_category": "Tech - Specialist",
+                "job_title": "Backend Developer",
+                "country_id": 102,  # Indonesia
+                "state_id": 1416,  # California (USA!) - MISMATCH!
+                "interest": "python, fastapi",
+                "coc_acknowledged": True,
+                "terms_agreed": True,
+                "privacy_agreed": True,
+            },
+        )
+
+        # Expect
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("does not belong to", response.json()["message"])
+
     def tearDown(self):
         self.db.close()
 
@@ -176,7 +356,7 @@ class TestUserProfileBase(IsolatedAsyncioTestCase):
             "bio": "Seorang software engineer handal dengan pengalaman lebih dari 5 tahun.",
             "job_category": JobCategory.TECH_SPECIALIST,
             "job_title": "Senior Backend Developer",
-            "country": "Indonesia",
+            "country_id": 1,
             "phone": "+6281234567890",
             "interest": "python, fastapi, testing",
             "github_username": "budisan",
@@ -261,7 +441,7 @@ class TestUserProfileCreate(IsolatedAsyncioTestCase):
             "bio": "Seorang software engineer handal dengan pengalaman lebih dari 5 tahun.",
             "job_category": JobCategory.TECH_SPECIALIST,
             "job_title": "Senior Backend Developer",
-            "country": "Indonesia",
+            "country_id": 1,
             "coc_acknowledged": True,
             "terms_agreed": True,
             "privacy_agreed": True,
@@ -280,7 +460,7 @@ class TestUserProfileDB(IsolatedAsyncioTestCase):
             "bio": "Seorang software engineer handal dengan pengalaman lebih dari 5 tahun.",
             "job_category": JobCategory.TECH_SPECIALIST,
             "job_title": "Senior Backend Developer",
-            "country": "Indonesia",
+            "country_id": 1,
             "phone": "+6281234567890",
             "interest": "python, fastapi, testing",
             "github_username": "budisan",

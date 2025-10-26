@@ -6,22 +6,15 @@ from core.health_check import health_check
 from core.log import logger
 from routes.auth import router as auth_router
 from routes.user_profile import router as user_profile_router
-from starlette.middleware.sessions import SessionMiddleware
+from routes.locations import router as locations_router
 from routes.ticket import router as ticket_router
+from routes.payment import router as payment_router
 
-from settings import SECRET_KEY
 
 health_check()
 
-
 app = FastAPI(title="PyconId 2025 BE")
 
-app.add_middleware(
-    SessionMiddleware,
-    secret_key=SECRET_KEY,
-    same_site="lax",
-    max_age=1800,
-)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -32,7 +25,9 @@ app.add_middleware(
 
 app.include_router(auth_router)
 app.include_router(user_profile_router)
+app.include_router(locations_router)
 app.include_router(ticket_router)
+app.include_router(payment_router)
 
 
 @app.exception_handler(ValidationError)

@@ -63,7 +63,7 @@ jobs:
   docker-build:
     name: Build Docker Image
     needs: format-lint-test
-    if: github.event_name == 'push'
+    #if: github.event_name == 'push'
     runs-on: ubuntu-latest
     env:
       REGISTRY: ghcr.io
@@ -206,7 +206,7 @@ jobs:
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.PROD_SSH_KNOWN_HOSTS }}" >> ~/.ssh/known_hosts
-      
+
       - name: Copy docker-compose.yaml and version.txt to server
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -214,9 +214,7 @@ jobs:
           username: ${{ secrets.PROD_SSH_USER }}
           port: ${{ secrets.PROD_SSH_PORT || '22' }}
           key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
-          source: |
-            docker-compose.yaml
-            version.txt
+          source: "docker-compose.yaml,version.txt"
           target: /home/${{ secrets.PROD_SSH_USER }}/pyconid25-be-prod/
           overwrite: true
 

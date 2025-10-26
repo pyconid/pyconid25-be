@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 NoContentResponse = None
@@ -18,14 +18,9 @@ class ValidationErrorResponseDetail(BaseModel):
 
 
 class ValidationErrorResponse(BaseModel):
-    message: str
-    error: list[ValidationErrorResponseDetail]
-
-    class Config:
-        # Konfigurasi agar model dapat digunakan dengan ORM
-        from_attributes = True
-        # Membuat contoh data untuk dokumentasi API
-        json_schema_extra = {
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_schema_extra={
             "example": {
                 "message": "Terjadi kesalahan validasi pada data form (Pydantic validation).",
                 "errors": [
@@ -39,7 +34,11 @@ class ValidationErrorResponse(BaseModel):
                     },
                 ],
             }
-        }
+        },
+    )
+
+    message: str
+    error: list[ValidationErrorResponseDetail]
 
 
 class ForbiddenResponse(BaseModel):
