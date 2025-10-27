@@ -23,27 +23,16 @@ class IndustryCategory(str, Enum):
 
 class JobCategory(str, Enum):
     TECH_SPECIALIST = "Tech - Specialist"
-    TECH_MANAGING = "Tech - Managing"
-    NON_TECH = "Non Tech"
-    TEACHER_LECTURER = "Teacher/Lecturer"
-    STUDENT = "Student"
-    ENTERPRENEUR = "Enterpreneur"
-    OTHER = "Other"
+    MANAGEMENT = "Management"
+    DESIGN = "Design"
+    MARKETING = "Marketing"
 
 
 class ParticipantType(str, Enum):
     NON_PARTICIPANT = "Non Participant"
-    KEYNOTE_SPEAKER = "Keynote Speaker"
-    REGULAR_SPEAKER = "Regular-Talk Speaker"
-    SHORT_SPEAKER = "Short-Talk Speaker"
-    ORGANIZER = "Organizer"
-    VOLUNTEER = "Volunteer"
-    SPONSOR = "Sponsor"
-    COMMUNITY = "Community"
-    PATRON = "Patron"
-    IN_PERSON = "In Person Participant"
-    ONLINE = "Online Participant"
-    STUDENT = "Student Participant"
+    NOT_USER_INPUT = "Not User Input"
+    HANDLED_BY_BACK_END = "Handled by Back End"
+
 
 class TShirtSize(str, Enum):
     S = "S"
@@ -51,20 +40,18 @@ class TShirtSize(str, Enum):
     L = "L"
     XL = "XL"
     XXL = "XXL"
-    XXXL = "XXXL"
-    XXXXL = "4XL"
 
 
 class Gender(str, Enum):
     MALE = "Male"
     FEMALE = "Female"
-    OTHER = "Prefer not to say"
 
 
 class LookingForOption(str, Enum):
     OPEN_OPPORTUNITIES = "Open Opportunities"
-    CLOSE_OPPORTUNITIES = "Close Opportunities"
+    NETWORKING = "Networking"
     HIRING = "Hiring"
+    MENTORSHIP = "Mentorship"
 
 
 class CountryReference(BaseModel):
