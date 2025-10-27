@@ -15,23 +15,47 @@ from pydantic import (
 
 
 class IndustryCategory(str, Enum):
-    TECHNOLOGY = "Technology"
-    FINANCE = "Finance"
-    HEALTHCARE = "Healthcare"
+    CAPITAL_GOODS = "Capital Goods"
+    COMMERCIAL = "Commercial & Professional Services"
+    CONSUMER_GOODS = "Consumer Goods"
+    CONSUMER_SERVICES = "Consumser Services"
     EDUCATION = "Education"
+    ENERGY = "Energy"
+    FINANCE = "Financial Service"
+    GOVERNMENT = "Government"
+    HEALTHCARE = "Healthcare"
+    INSURANCE = "Insurance"
+    MEDIA = "Media & Entertainment"
+    REAL_ESTATE = "Real Estate"
+    HARDWARE = "Semiconductor & Hardware Components"
+    TECHNOLOGY = "Software & Technolgy Services"
+    TELECOMMUNICATION = "Telecommunication Services"
+    TRANSPORTATION = "Transportation"
+    UTILITIES = "Utilities"
+    OTHERS = "Others"
 
 
 class JobCategory(str, Enum):
     TECH_SPECIALIST = "Tech - Specialist"
-    MANAGEMENT = "Management"
-    DESIGN = "Design"
-    MARKETING = "Marketing"
+    TECH_MANAGING = "Tech - Managing"
+    NON_TECH = "Non Tech"
+    TEACHER_LECTURER = "Teacher/Lecturer"
+    STUDENT = "Student"
+    ENTERPRENEUR = "Enterpreneur"
+    OTHER = "Other"
 
 
 class ParticipantType(str, Enum):
     NON_PARTICIPANT = "Non Participant"
-    NOT_USER_INPUT = "Not User Input"
-    HANDLED_BY_BACK_END = "Handled by Back End"
+    IN_PERSON = "In Person Participant"
+    ONLINE = "Online Participant"
+    KEYNOTE_SPEAKER = "Keynote Speaker"
+    SPEAKER = "Speaker"
+    ORGANIZER = "Organizer"
+    VOLUNTEER = "Volunteer"
+    SPONSOR = "Sponsor"
+    COMMUNITY = "Community"
+    PATRON = "Patron"
 
 
 class TShirtSize(str, Enum):
@@ -40,18 +64,21 @@ class TShirtSize(str, Enum):
     L = "L"
     XL = "XL"
     XXL = "XXL"
+    XXXL = "XXXL"
+    XXXXL = "4XL"
 
 
 class Gender(str, Enum):
     MALE = "Male"
     FEMALE = "Female"
+    OTHER = "Prefer Not To Say"
 
 
 class LookingForOption(str, Enum):
     OPEN_OPPORTUNITIES = "Open Opportunities"
+    CLOSE_OPPORTUNITIES = "CLOSE Opportunities"
     NETWORKING = "Networking"
     HIRING = "Hiring"
-    MENTORSHIP = "Mentorship"
 
 
 class CountryReference(BaseModel):
