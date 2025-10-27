@@ -76,7 +76,7 @@ class Gender(str, Enum):
 
 class LookingForOption(str, Enum):
     OPEN_OPPORTUNITIES = "Open Opportunities"
-    CLOSE_OPPORTUNITIES = "CLOSE Opportunities"
+    CLOSE_OPPORTUNITIES = "Close Opportunities"
     NETWORKING = "Networking"
     HIRING = "Hiring"
 
