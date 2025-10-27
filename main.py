@@ -8,6 +8,8 @@ from routes.auth import router as auth_router
 from routes.user_profile import router as user_profile_router
 from routes.locations import router as locations_router
 from routes.ticket import router as ticket_router
+from routes.schedule import router as schedule_router
+from routes.speaker import router as speaker_router
 from routes.payment import router as payment_router
 
 
@@ -27,6 +29,8 @@ app.include_router(auth_router)
 app.include_router(user_profile_router)
 app.include_router(locations_router)
 app.include_router(ticket_router)
+app.include_router(speaker_router)
+app.include_router(schedule_router)
 app.include_router(payment_router)
 
 

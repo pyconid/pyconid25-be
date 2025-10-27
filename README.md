@@ -54,6 +54,8 @@ atau bisa gunakan initial-data yang sudah include import data lokasi:
 python cli.py initial-data
 ```
 
+untuk cities.json di github asalnya sudah mengcompress .json ke .json.gz (tinggal di uncompress)
+
 ## Kontribusi
 untuk tata cara kontribusi bisa dilihat di [CONTRIBUTING.md](./CONTRIBUTING.md) dan diharapkan kontributor memematuhi [Code of Conduct](./CODE%20OF%20CONDUCT.md) yang berlaku.
 
