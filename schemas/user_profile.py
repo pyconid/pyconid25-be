@@ -367,7 +367,7 @@ if __name__ == "__main__":
         "last_name": "Wijaya",
         "email": "citra.w@email.com",
         "bio": "A creative designer focused on user experience and interface design.",
-        "job_category": "Design",
+        "job_category": "Tech - Specialist",
         "job_title": "UI/UX Designer",
         "country": "Indonesia",
         "interest": "figma, design thinking, user research",  # Akan diubah jadi list
@@ -395,8 +395,8 @@ if __name__ == "__main__":
         "last_name": "Pratama",
         "email": "andi@.com",  # Email tidak valid
         "bio": "Too short",  # Bio terlalu pendek (min_length=10)
-        "job_category": "Tech - Specialist",
-        "job_title": "Developer",
+        "job_category": "Tech - Managing",
+        "job_title": "Developer Manager",
         "country": "Indonesia",
         "phone": "081234567890",  # Format telepon salah
         "github_username": "https://github.com/andipratama",  # Seharusnya username saja
