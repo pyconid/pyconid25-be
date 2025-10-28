@@ -87,7 +87,7 @@ class TestUserProfile(IsolatedAsyncioTestCase):
                 "last_name": "Pratama",
                 "email": "andi@.com",  # Email tidak valid
                 "bio": "Too short",  # Bio terlalu pendek (min_length=10)
-                "job_category": "Tech - Manager",
+                "job_category": "Tech - Managing",
                 "job_title": "Developer Manager",
                 "country_id": 1,
                 "phone": "081234567890",  # Format telepon salah
