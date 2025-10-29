@@ -214,6 +214,7 @@ class TestUserProfile(IsolatedAsyncioTestCase):
         )
 
         # Expect
+        print(response.json())
         self.assertEqual(response.status_code, 200)
 
     async def test_update_profile_with_invalid_country(self):
@@ -333,6 +334,52 @@ class TestUserProfile(IsolatedAsyncioTestCase):
         # Expect
         self.assertEqual(response.status_code, 400)
         self.assertIn("does not belong to", response.json()["message"])
+
+    async def test_update_user_profile_null_profile_picture(self):
+        # Given
+        new_user = User(
+            username="testuser",
+            email="testuser@local.com",
+            password=generate_hash_password("password"),
+            profile_picture="existing_profile.png",
+            is_active=True,
+        )
+        self.db.add(new_user)
+
+        dummy_country = Country(id=1, name="Indonesia", iso2="ID", iso3="IDN")
+        self.db.merge(dummy_country)
+
+        self.db.commit()
+        app.dependency_overrides[get_db_sync] = get_db_sync_for_test(db=self.db)
+        client = TestClient(app)
+        response = client.post(
+            "/auth/email/signin/",
+            json={"email": "testuser@local.com", "password": "password"},
+        )
+        token = response.json().get("token", None)
+
+        # When 1
+        response = client.put(
+            "/user-profile/",
+            headers={"Authorization": f"Bearer {token}"},
+            data={
+                "first_name": "Citra",
+                "last_name": "Wijaya",
+                "email": "citra.w@email.com",
+                "bio": "A creative designer focused on user experience and interface design.",
+                "job_category": "Tech - Specialist",
+                "job_title": "UI/UX Designer",
+                "country_id": 1,
+                "interest": "figma, design thinking, user research",  # Akan diubah jadi list
+                "coc_acknowledged": True,
+                "terms_agreed": True,
+                "privacy_agreed": True,
+            },
+        )
+
+        # Expect 1
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(new_user.profile_picture, "existing_profile.png")
 
     def tearDown(self):
         self.db.close()
@@ -480,18 +527,3 @@ class TestUserProfileDB(IsolatedAsyncioTestCase):
             )
         except ValidationError as e:
             self.fail(f"UserProfileDB raised ValidationError unexpectedly! \n{e}")
-
-    async def test_missing_profile_picture_raises_error(self):
-        """Tes Validasi Baru: Memastikan `profile_picture` sekarang menjadi field wajib."""
-        data_without_pic = self.valid_db_data.copy()
-        del data_without_pic["profile_picture"]
-        with self.assertRaises(ValidationError) as context:
-            UserProfileDB(**data_without_pic)
-        self.assertIn("profile_picture", str(context.exception))
-
-    async def test_invalid_profile_picture_url_raises_error(self):
-        """Tes Tipe Data Baru: Memastikan `profile_picture` harus berupa URL yang valid."""
-        invalid_data = self.valid_db_data.copy()
-        invalid_data["profile_picture"] = "ini-bukan-url"
-        with self.assertRaises(ValidationError):
-            UserProfileDB(**invalid_data)

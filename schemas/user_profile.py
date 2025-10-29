@@ -313,7 +313,9 @@ class UserProfileDB(UserProfileCreate):
     """
 
     # Profile Info
-    profile_picture: HttpUrl = Field(..., description="URL to the profile picture.")
+    profile_picture: Optional[str] = Field(
+        None, description="URL to the profile picture."
+    )
 
 
 class UserProfileEditSuccessResponse(UserProfileDB):
