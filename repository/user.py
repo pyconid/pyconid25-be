@@ -133,6 +133,10 @@ def update_user_profile(
         if key not in valid_columns:
             continue
 
+        # Skip updating profile_picture if value is None
+        if key == "profile_picture" and value is None:
+            continue
+
         # Convert Pydantic types to native
         if isinstance(value, HttpUrl):
             value = str(value)
