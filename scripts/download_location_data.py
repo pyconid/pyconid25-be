@@ -21,9 +21,9 @@ def download_location_data():
         try:
             response = httpx.get(url, timeout=60)
             response.raise_for_status()
-            
-            if url.endswith('.gz'):
-                data = json.loads(gzip.decompress(response.content).decode('utf-8'))
+
+            if url.endswith(".gz"):
+                data = json.loads(gzip.decompress(response.content).decode("utf-8"))
             else:
                 data = response.json()
 
