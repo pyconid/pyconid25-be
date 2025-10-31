@@ -1,6 +1,7 @@
 import httpx
 import json
 import os
+import gzip
 
 
 def download_location_data():
@@ -12,7 +13,7 @@ def download_location_data():
     files = {
         "countries.json": f"{base_url}/countries.json",
         "states.json": f"{base_url}/states.json",
-        "cities.json": f"{base_url}/cities.json",
+        "cities.json": f"{base_url}/cities.json.gz",
     }
 
     for filename, url in files.items():
@@ -20,7 +21,11 @@ def download_location_data():
         try:
             response = httpx.get(url, timeout=60)
             response.raise_for_status()
-            data = response.json()
+            
+            if url.endswith('.gz'):
+                data = json.loads(gzip.decompress(response.content).decode('utf-8'))
+            else:
+                data = response.json()
 
             filepath = os.path.join(data_dir, filename)
             with open(filepath, "w", encoding="utf-8") as f:
