@@ -1,9 +1,22 @@
 import json
 import os
+import gzip
 from sqlalchemy.orm import Session
 from models.Country import Country
 from models.State import State
 from models.City import City
+
+
+def load_json_data(file_path):
+    """Load JSON data from either .json or .json.gz file"""
+    if os.path.exists(file_path):
+        with open(file_path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    elif os.path.exists(f"{file_path}.gz"):
+        with gzip.open(f"{file_path}.gz", "rt", encoding="utf-8") as f:
+            return json.load(f)
+    else:
+        raise FileNotFoundError(f"Neither {file_path} nor {file_path}.gz found")
 
 
 def initial_country_city_state_seeders(db: Session, is_commit: bool = True):
@@ -15,16 +28,13 @@ def initial_country_city_state_seeders(db: Session, is_commit: bool = True):
         raise FileNotFoundError(f"Directory {data_dir} not found")
 
     print("\nLoading countries...")
-    with open(f"{data_dir}/countries.json", "r", encoding="utf-8") as f:
-        countries_data = json.load(f)
+    countries_data = load_json_data(f"{data_dir}/countries.json")
 
     print("Loading states...")
-    with open(f"{data_dir}/states.json", "r", encoding="utf-8") as f:
-        states_data = json.load(f)
+    states_data = load_json_data(f"{data_dir}/states.json")
 
     print("Loading cities...")
-    with open(f"{data_dir}/cities.json", "r", encoding="utf-8") as f:
-        cities_data = json.load(f)
+    cities_data = load_json_data(f"{data_dir}/cities.json")
 
     print("\nData Summary:")
     print(f" - Countries: {len(countries_data)}")
