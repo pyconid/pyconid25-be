@@ -99,3 +99,4 @@ SELECT has_schema_privilege('public', 'CREATE');`
 ```
 
 Luarannya: `t` (true) jika sudah benar. Setelah ini dapat menjalankan alembic kembali.
+
