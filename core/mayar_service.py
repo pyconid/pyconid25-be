@@ -53,7 +53,7 @@ class MayarService:
         Raises:
             httpx.HTTPError: If the request fails
         """
-        endpoint = f"{self.base_url}/v1/invoice/create"
+        endpoint = f"{self.base_url}/v1/payment/create"
         redirect_url = (
             f"{FRONTEND_BASE_URL}/payment/{tx_internal_id if tx_internal_id else ''}"
         )
@@ -61,14 +61,14 @@ class MayarService:
             hours=MAYAR_PAYMENT_EXPIRE_HOURS
         )
 
-        items = [
-            {
-                "quantity": 1,
-                "rate": ticket.price,
-                "description": ticket.name,
-            }
-        ]
-        description = ticket.description if ticket.description else ticket.name
+        # items = [
+        #     {
+        #         "quantity": 1,
+        #         "rate": ticket.price,
+        #         "description": ticket.name,
+        #     }
+        # ]
+        description = f"User {customer_name} purchasing ticket '{ticket.name}'"
 
         payload = {
             "name": customer_name,
@@ -77,7 +77,8 @@ class MayarService:
             "description": description,
             "redirectUrl": redirect_url,
             "expiredAt": expired_at.isoformat(),
-            "items": items,
+            "amount": ticket.price,
+            # "items": items,
         }
 
         try:
@@ -120,7 +121,7 @@ class MayarService:
         Raises:
             httpx.HTTPError: If the request fails
         """
-        endpoint = f"{self.base_url}/v1/invoice/{payment_id}"
+        endpoint = f"{self.base_url}/v1/payment/{payment_id}"
 
         try:
             async with httpx.AsyncClient() as client:
