@@ -226,7 +226,6 @@ jobs:
           key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
           script: |
             cd ~/pyconid25-be-prod
-            echo "${{ secrets.PROD_ENV_FILE }}" > .env
             chmod 644 .env
 
             # Update IMAGE_TAG di .env sesuai version.txt
