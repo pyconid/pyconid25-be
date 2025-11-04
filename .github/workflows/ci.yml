@@ -163,7 +163,6 @@ jobs:
           key: ${{ secrets.DEV_SSH_PRIVATE_KEY }}
           script: |
             cd ~/pyconid25-be-dev
-            echo "${{ secrets.DEV_ENV_FILE }}" > .env
             chmod 644 .env
 
             # Update IMAGE_TAG di .env sesuai version.txt
