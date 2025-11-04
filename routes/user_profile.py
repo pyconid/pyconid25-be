@@ -56,7 +56,7 @@ router = APIRouter(prefix="/user-profile", tags=["UserProfile"])
     },
 )
 async def update_user_profile(
-    profile_picture: UploadFile = File(...),
+    profile_picture: Optional[UploadFile] = File(None),
     first_name: str = Form(...),
     last_name: str = Form(...),
     email: Optional[EmailStr] = Form(None),
@@ -139,11 +139,14 @@ async def update_user_profile(
         privacy_agreed=privacy_agreed,
     )
     # 1. Simpan file dan dapatkan URL
-    profile_picture_url = save_file_and_get_url(profile_picture)
+    profile_picture_url = None
+    if profile_picture:
+        profile_picture_url = save_file_and_get_url(profile_picture)
 
     # 2. Gabungkan data. user_form.model_dump() akan berisi
     user_profile_dict = user_profile_pydantic.model_dump()
-    user_profile_dict["profile_picture"] = profile_picture_url
+    if profile_picture_url:
+        user_profile_dict["profile_picture"] = profile_picture_url
 
     # 3. Validasi dengan model DB
     # UserProfileDB akan mengharapkan semua field dari Create + profile_picture
