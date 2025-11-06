@@ -2,6 +2,7 @@ from typing import List, Optional
 from fastapi import Query
 from pydantic import BaseModel
 from uuid import UUID
+from schemas.user_profile import ParticipantType
 
 
 class VoucherQuery(BaseModel):
@@ -14,7 +15,7 @@ class VoucherCreateRequest(BaseModel):
     code: str
     value: int = 0
     quota: int
-    type: str | None = None
+    type: ParticipantType | None = None
     email_whitelist: dict | None = None
     is_active: bool = False
 
@@ -36,7 +37,7 @@ class VoucherUpdateValueRequest(BaseModel):
 
 
 class VoucherUpdateTypeRequest(BaseModel):
-    type: str
+    type: ParticipantType
 
 
 class VoucherResponse(BaseModel):

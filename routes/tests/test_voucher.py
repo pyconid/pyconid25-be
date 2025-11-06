@@ -25,7 +25,7 @@ class TestVoucher(TestCase):
             id=self.test_voucher_id,
             code="TEST2025",
             value=50000,
-            type="discount",
+            type="Speaker",
             email_whitelist={"emails": ["test@example.com", "user@example.com"]},
             quota=100,
             is_active=True,
@@ -48,7 +48,7 @@ class TestVoucher(TestCase):
                 "code": "NEWCODE2025",
                 "value": 100000,
                 "quota": 50,
-                "type": "percentage",
+                "type": "Speaker",
                 "email_whitelist": {"emails": ["new@example.com"]},
                 "is_active": False,
             },
@@ -58,8 +58,65 @@ class TestVoucher(TestCase):
         assert data["code"] == "NEWCODE2025"
         assert data["value"] == 100000
         assert data["quota"] == 50
-        assert data["type"] == "percentage"
+        assert data["type"] == "Speaker"
         assert data["is_active"] is False
+
+    def test_create_voucher_with_invalid_participant_type(self):
+        """Test that creating voucher with invalid participant type is rejected"""
+        response = self.client.post(
+            "/voucher/",
+            json={
+                "code": "INVALID2025",
+                "value": 50000,
+                "quota": 20,
+                "type": "invalid_type",
+                "is_active": False,
+            },
+        )
+        assert response.status_code == 422
+        data = response.json()
+        assert "detail" in data
+        assert any("type" in str(error).lower() for error in data["detail"])
+
+    def test_create_voucher_with_random_string_type(self):
+        """Test that creating voucher with random string type is rejected"""
+        response = self.client.post(
+            "/voucher/",
+            json={
+                "code": "RANDOM2025",
+                "quota": 15,
+                "type": "random_string",
+            },
+        )
+        assert response.status_code == 422
+
+    def test_create_voucher_with_valid_participant_type(self):
+        """Test that creating voucher with valid ParticipantType enum works"""
+        valid_types = [
+            "Non Participant",
+            "In Person Participant",
+            "Online Participant",
+            "Keynote Speaker",
+            "Speaker",
+            "Organizer",
+            "Volunteer",
+            "Sponsor",
+            "Community",
+            "Patron",
+        ]
+        
+        for idx, participant_type in enumerate(valid_types):
+            response = self.client.post(
+                "/voucher/",
+                json={
+                    "code": f"VALID{idx:02d}",
+                    "quota": 10,
+                    "type": participant_type,
+                },
+            )
+            assert response.status_code == 200, f"Failed for type: {participant_type}"
+            data = response.json()
+            assert data["type"] == participant_type
 
     def test_create_voucher_minimal(self):
         response = self.client.post(
@@ -154,18 +211,28 @@ class TestVoucher(TestCase):
     def test_update_voucher_type(self):
         response = self.client.patch(
             f"/voucher/{self.test_voucher_id}/type",
-            json={"type": "fixed"},
+            json={"type": "Volunteer"},
         )
         assert response.status_code == 200
         data = response.json()
-        assert data["type"] == "fixed"
+        assert data["type"] == "Volunteer"
         assert data["code"] == "TEST2025"
+
+    def test_update_voucher_type_with_invalid_type(self):
+        """Test that updating voucher type with invalid type is rejected"""
+        response = self.client.patch(
+            f"/voucher/{self.test_voucher_id}/type",
+            json={"type": "invalid_type"},
+        )
+        assert response.status_code == 422
+        data = response.json()
+        assert "detail" in data
 
     def test_update_voucher_type_not_found(self):
         random_id = uuid.uuid4()
         response = self.client.patch(
             f"/voucher/{random_id}/type",
-            json={"type": "percentage"},
+            json={"type": "Speaker"},
         )
         assert response.status_code == 404
 
