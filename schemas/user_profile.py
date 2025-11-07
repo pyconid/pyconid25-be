@@ -164,6 +164,11 @@ class UserProfilePublic(UserProfileBase):
     country: Optional[CountryReference] = None
     bio: str | None
     participant_type: str | None
+    share_my_email_and_phone_number: Optional[bool] = False
+    share_my_job_and_company: Optional[bool] = False
+    share_my_location: Optional[bool] = False
+    share_my_interest: Optional[bool] = False
+    share_my_public_social_media: Optional[bool] = False
     coc_acknowledged: Optional[bool] = False
     terms_agreed: Optional[bool] = False
     privacy_agreed: Optional[bool] = False
@@ -246,7 +251,10 @@ class UserProfileCreate(UserProfileUpdateBase):
     last_name: str = Field(
         ..., min_length=1, max_length=50, description="User's last name."
     )
-    email: Optional[EmailStr] = Field(None, description="User's email address.")
+    # email: Optional[EmailStr] = Field(None, description="User's email address.")
+    share_my_email_and_phone_number: Optional[bool] = Field(
+        None, description="Allow sharing email and phone number."
+    )
     bio: str = Field(
         ...,
         min_length=10,
@@ -261,6 +269,9 @@ class UserProfileCreate(UserProfileUpdateBase):
     )
     job_category: JobCategory = Field(..., description="Category of the user's job.")
     job_title: str = Field(..., max_length=100, description="User's job title.")
+    share_my_job_and_company: Optional[bool] = Field(
+        None, description="Allow sharing job and company information."
+    )
     experience: Optional[int] = Field(
         None, ge=0, description="Years of professional experience."
     )
@@ -284,9 +295,15 @@ class UserProfileCreate(UserProfileUpdateBase):
         None, max_length=10, description="Postal or zip code."
     )
     address: Optional[str] = Field(None, max_length=255, description="Full address.")
+    share_my_location: Optional[bool] = Field(
+        None, description="Allow sharing location information."
+    )
 
     # Interests and Expertise
     interest: Optional[List[str]] = Field(None, description="List of user's interests.")
+    share_my_interest: Optional[bool] = Field(
+        None, description="Allow sharing interests."
+    )
     looking_for: Optional[LookingForOption] = None
     expertise: Optional[List[str]] = Field(
         None, description="List of skills user is offering or searching for."
@@ -299,6 +316,9 @@ class UserProfileCreate(UserProfileUpdateBase):
     linkedin_username: Optional[str] = None
     twitter_username: Optional[str] = None
     instagram_username: Optional[str] = None
+    share_my_public_social_media: Optional[bool] = Field(
+        None, description="Allow sharing social media profiles."
+    )
 
     # Agreements
     coc_acknowledged: bool = Field(..., description="Code of Conduct acknowledgement.")

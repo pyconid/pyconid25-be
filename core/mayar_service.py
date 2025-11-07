@@ -54,9 +54,7 @@ class MayarService:
             httpx.HTTPError: If the request fails
         """
         endpoint = f"{self.base_url}/v1/payment/create"
-        redirect_url = (
-            f"{FRONTEND_BASE_URL}/payment/{tx_internal_id if tx_internal_id else ''}"
-        )
+        redirect_url = f"{FRONTEND_BASE_URL}/auth/payment"
         expired_at = datetime.now(tz=timezone(TZ)) + timedelta(
             hours=MAYAR_PAYMENT_EXPIRE_HOURS
         )
