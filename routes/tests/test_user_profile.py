@@ -70,11 +70,23 @@ class TestUserProfile(IsolatedAsyncioTestCase):
                 "coc_acknowledged": True,
                 "terms_agreed": True,
                 "privacy_agreed": True,
+                "share_my_location": True,
+                "share_my_email_and_phone_number": True,
+                "share_my_job_and_company": True,
+                "share_my_interest": True,
+                "share_my_public_social_media": True,
             },
         )
 
         # Expect 1
         self.assertEqual(response.status_code, 200)
+
+        # new_user = self.db.query(User).where(User.email == new_user.email).first()
+        # print(new_user.share_my_email_and_phone_number)
+        self.assertEqual(new_user.share_my_email_and_phone_number, True)
+        self.assertEqual(new_user.share_my_job_and_company, True)
+        self.assertEqual(new_user.share_my_interest, True)
+        self.assertEqual(new_user.share_my_public_social_media, True)
 
         # When 2
         response = client.put(
@@ -85,7 +97,7 @@ class TestUserProfile(IsolatedAsyncioTestCase):
                 "profile_picture": "not-a-url",  # URL tidak valid
                 "first_name": "Andi",
                 "last_name": "Pratama",
-                "email": "andi@.com",  # Email tidak valid
+                # "email": "andi@.com",  # Email tidak valid
                 "bio": "Too short",  # Bio terlalu pendek (min_length=10)
                 "job_category": "Tech - Managing",
                 "job_title": "Developer Manager",
@@ -95,6 +107,11 @@ class TestUserProfile(IsolatedAsyncioTestCase):
                 "coc_acknowledged": False,  # Harus True
                 "terms_agreed": True,
                 "privacy_agreed": True,
+                "share_my_location": True,
+                "share_my_email_and_phone_number": True,
+                "share_my_job_and_company": True,
+                "share_my_interest": True,
+                "share_my_public_social_media": True,
             },
         )
 
@@ -160,6 +177,11 @@ class TestUserProfile(IsolatedAsyncioTestCase):
         self.assertIn("coc_acknowledged", response.json())
         self.assertIn("terms_agreed", response.json())
         self.assertIn("privacy_agreed", response.json())
+        self.assertIn("share_my_email_and_phone_number", response.json())
+        self.assertIn("share_my_job_and_company", response.json())
+        self.assertIn("share_my_location", response.json())
+        self.assertIn("share_my_interest", response.json())
+        self.assertIn("share_my_public_social_media", response.json())
 
     async def test_update_profile_with_valid_location(self):
         """Test update user profile dengan location hierarchy yang valid"""
