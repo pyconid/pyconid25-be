@@ -60,10 +60,12 @@ async def update_user_profile(
     first_name: str = Form(...),
     last_name: str = Form(...),
     email: Optional[EmailStr] = Form(None),
+    share_my_email_and_phone_number: Optional[bool] = Form(None),
     industry_categories: Optional[IndustryCategory] = Form(None),
     company: Optional[str] = Form(None),
     job_category: JobCategory = Form(...),
     job_title: str = Form(...),
+    share_my_job_and_company: Optional[bool] = Form(None),
     experience: Optional[int] = Form(None),
     t_shirt_size: Optional[TShirtSize] = Form(None),
     gender: Optional[Gender] = Form(None),
@@ -74,8 +76,10 @@ async def update_user_profile(
     city_id: Optional[int] = Form(None),
     zip_code: Optional[str] = Form(None),
     address: Optional[str] = Form(None),
+    share_my_location: Optional[bool] = Form(None),
     bio: str = Form(...),
     interest: Optional[str] = Form(None),  # comma separated
+    share_my_interest: Optional[bool] = Form(None),
     looking_for: Optional[LookingForOption] = Form(None),
     expertise: Optional[str] = Form(None),  # comma separated
     website: Optional[HttpUrl] = Form(None),
@@ -84,6 +88,7 @@ async def update_user_profile(
     linkedin_username: Optional[str] = Form(None),
     twitter_username: Optional[str] = Form(None),
     instagram_username: Optional[str] = Form(None),
+    share_my_public_social_media: Optional[bool] = Form(None),
     coc_acknowledged: bool = Form(...),
     terms_agreed: bool = Form(...),
     privacy_agreed: bool = Form(...),
@@ -92,7 +97,6 @@ async def update_user_profile(
 ):
     if user is None:
         return common_response(Unauthorized(message="Unauthorized"))
-
     if country_id:
         try:
             validate_location_hierarchy(
@@ -110,8 +114,11 @@ async def update_user_profile(
         first_name=first_name,
         last_name=last_name,
         email=email,
+        share_my_email_and_phone_number=share_my_email_and_phone_number,
         industry_categories=industry_categories,
         company=company,
+        share_my_job_and_company=share_my_job_and_company,
+        share_my_interest=share_my_interest,
         job_category=job_category,
         job_title=job_title,
         experience=experience,
@@ -124,6 +131,7 @@ async def update_user_profile(
         city_id=city_id,
         zip_code=zip_code,
         address=address,
+        share_my_location=share_my_location,
         bio=bio,
         interest=interest,
         looking_for=looking_for,
@@ -134,6 +142,7 @@ async def update_user_profile(
         linkedin_username=linkedin_username,
         twitter_username=twitter_username,
         instagram_username=instagram_username,
+        share_my_public_social_media=share_my_public_social_media,
         coc_acknowledged=coc_acknowledged,
         terms_agreed=terms_agreed,
         privacy_agreed=privacy_agreed,
