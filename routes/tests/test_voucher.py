@@ -104,7 +104,7 @@ class TestVoucher(TestCase):
             "Community",
             "Patron",
         ]
-        
+
         for idx, participant_type in enumerate(valid_types):
             response = self.client.post(
                 "/voucher/",
