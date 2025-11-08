@@ -460,6 +460,9 @@ class TestPayment(IsolatedAsyncioTestCase):
             data = response.json()
             self.assertEqual(data["message"], "Webhook processed successfully")
             self.assertEqual(payment.status, PaymentStatus.PAID)
+            self.assertEqual(
+                self.test_user.participant_type, self.test_ticket.user_participant_type
+            )
 
     async def test_payment_webhook_invalid_token(self):
         webhook_payload = {
