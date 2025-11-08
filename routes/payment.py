@@ -26,6 +26,8 @@ from schemas.payment import (
     Ticket,
     User,
 )
+from models.User import User as UserModel
+from models.Ticket import Ticket as TicketModel
 from repository import payment as paymentRepo, ticket as ticketRepo
 from core.mayar_service import MayarService
 from models.Payment import PaymentStatus
@@ -362,8 +364,13 @@ async def payment_webhook(
                 status=status,
                 mayar_id=mayar_id,
                 mayar_transaction_id=mayar_transaction_id,
+                is_commit=False,
             )
-
+            user: UserModel = payment.user
+            ticket: TicketModel = payment.ticket
+            user.participant_type = ticket.user_participant_type
+            db.add(user)
+            db.commit()
             logger.info(f"Payment {payment.id} updated to status {status} via webhook")
 
         return common_response(Ok(data={"message": "Webhook processed successfully"}))
