@@ -5,9 +5,6 @@ from models import Base
 from sqlalchemy import UUID, DateTime, Integer, String, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from models.StreamAsset import StreamAsset
-from models.User import User
-
 
 class StreamView(Base):
     __tablename__ = "stream_view"
@@ -48,7 +45,5 @@ class StreamView(Base):
     user_agent: Mapped[str] = mapped_column("user_agent", String(500), nullable=True)
 
     # Relationships
-    stream_asset: Mapped[StreamAsset] = relationship(
-        "StreamAsset", back_populates="stream_views"
-    )
-    user: Mapped[User] = relationship("User", foreign_keys=[user_id])
+    stream_asset = relationship("StreamAsset", back_populates="stream_views")
+    user = relationship("User", foreign_keys=[user_id])

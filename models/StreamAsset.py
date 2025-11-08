@@ -6,9 +6,6 @@ from sqlalchemy import UUID, Boolean, DateTime, Integer, String, Text, ForeignKe
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 import enum
 
-from models.Schedule import Schedule
-from models.StreamView import StreamView
-
 
 class StreamStatus(enum.StrEnum):
     PENDING = "PENDING"
@@ -96,9 +93,9 @@ class StreamAsset(Base):
         "deleted_at", DateTime(timezone=True), nullable=True
     )
 
-    schedule: Mapped[Schedule] = relationship(
+    schedule = relationship(
         "Schedule", back_populates="stream_asset", foreign_keys=[schedule_id]
     )
-    stream_views: Mapped[list[StreamView]] = relationship(
+    stream_views = relationship(
         "StreamView", back_populates="stream_asset", cascade="all, delete-orphan"
     )
