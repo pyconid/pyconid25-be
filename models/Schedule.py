@@ -4,6 +4,9 @@ from models import Base
 from sqlalchemy import UUID, DateTime, ForeignKey, String
 from sqlalchemy.orm import mapped_column, Mapped, relationship
 
+from models.Speaker import Speaker
+from models.StreamAsset import StreamAsset
+
 
 class Schedule(Base):
     __tablename__ = "schedule"
@@ -33,5 +36,9 @@ class Schedule(Base):
         default=datetime.datetime.now(datetime.timezone.utc),
     )
     deleted_at = mapped_column("deleted_at", DateTime(timezone=True))
-    # ✅ Relationship ke Speaker
-    speaker = relationship("Speaker", backref="schedules")
+
+    # Relationships
+    speaker: Mapped[Speaker] = relationship("Speaker", backref="schedules")
+    stream_asset: Mapped[StreamAsset] = relationship(
+        "StreamAsset", back_populates="schedule", uselist=False
+    )
