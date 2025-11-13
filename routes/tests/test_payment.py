@@ -897,6 +897,95 @@ class TestPayment(IsolatedAsyncioTestCase):
             data2 = response2.json()
             self.assertEqual(data2["message"], "Voucher quota has been exhausted.")
 
+    async def test_create_payment_with_voucher_quota_enforcement(self):
+        # Create voucher with quota = 2
+        race_voucher = Voucher(
+            code="RACEVOUCHER",
+            value=100000,
+            quota=2,  # Only 2 quota available
+            is_active=True,
+        )
+        self.db.add(race_voucher)
+        self.db.commit()
+
+        mock_mayar_response = {
+            "statusCode": 200,
+            "messages": "success",
+            "data": {
+                "id": "mayar-id-race",
+                "transactionId": "mayar-tx-race",
+                "link": "https://mayar.id/pay/test-link-race",
+            },
+        }
+
+        with patch("routes.payment.MayarService") as MockMayarService:
+            mock_service = MagicMock()
+            mock_service.create_payment = AsyncMock(return_value=mock_mayar_response)
+            MockMayarService.return_value = mock_service
+
+            responses = []
+
+            # Make 4 sequential requests - only first 2 should succeed
+            for i in range(4):
+                response = self.client.post(
+                    "/payment/",
+                    json={
+                        "ticket_id": str(self.test_ticket.id),
+                        "voucher_code": "RACEVOUCHER",
+                    },
+                    headers={"Authorization": f"Bearer {self.test_token}"},
+                )
+                responses.append(response)
+
+            # Count successful and failed responses
+            success_count = sum(1 for r in responses if r.status_code == 200)
+            failed_count = sum(1 for r in responses if r.status_code == 400)
+
+            # CRITICAL: Only first 2 should succeed, last 2 should fail
+            self.assertEqual(
+                success_count, 2, "Only two requests should succeed with quota=2"
+            )
+            self.assertEqual(
+                failed_count, 2, "Two requests should fail due to quota exhausted"
+            )
+
+            # Verify responses are in correct order
+            self.assertEqual(
+                responses[0].status_code, 200, "First request should succeed"
+            )
+            self.assertEqual(
+                responses[1].status_code, 200, "Second request should succeed"
+            )
+            self.assertEqual(responses[2].status_code, 400, "Third request should fail")
+            self.assertEqual(
+                responses[3].status_code, 400, "Fourth request should fail"
+            )
+
+            # Verify quota is now 0 (not negative)
+            self.db.refresh(race_voucher)
+            self.assertEqual(race_voucher.quota, 0, "Quota should be exactly 0")
+            self.assertGreaterEqual(
+                race_voucher.quota, 0, "Quota should never be negative"
+            )
+
+            # Verify error messages for failed requests
+            for i in [2, 3]:
+                data = responses[i].json()
+                self.assertEqual(
+                    data["message"],
+                    "Voucher quota has been exhausted.",
+                    f"Request {i + 1} should have quota exhausted error",
+                )
+
+            # Verify successful payments have correct amount
+            for i in [0, 1]:
+                data = responses[i].json()
+                self.assertEqual(
+                    data["amount"],
+                    400000,  # 500000 - 100000
+                    f"Request {i + 1} should have correct discounted amount",
+                )
+
     async def test_payment_webhook_with_voucher_participant_type(self):
         speaker_voucher = Voucher(
             code="WEBHOOKSPEAKER",
