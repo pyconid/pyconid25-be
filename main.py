@@ -11,6 +11,7 @@ from routes.ticket import router as ticket_router
 from routes.schedule import router as schedule_router
 from routes.speaker import router as speaker_router
 from routes.payment import router as payment_router
+from routes.voucher import router as voucher_router
 
 
 health_check()
@@ -32,6 +33,7 @@ app.include_router(ticket_router)
 app.include_router(speaker_router)
 app.include_router(schedule_router)
 app.include_router(payment_router)
+app.include_router(voucher_router)
 
 
 @app.exception_handler(ValidationError)

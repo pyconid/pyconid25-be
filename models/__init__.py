@@ -64,3 +64,4 @@ from models.ResetPassword import ResetPassword  # NOQA
 from models.Payment import Payment  # NOQA
 from models.Schedule import Schedule  # NOQA
 from models.Speaker import Speaker  # NOQA
+from models.Voucher import Voucher  # NOQA
