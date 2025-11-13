@@ -9,6 +9,11 @@ class Ticket(BaseModel):
     name: str
 
 
+class Voucher(BaseModel):
+    code: str
+    value: int
+
+
 class User(BaseModel):
     id: str
     first_name: Optional[str]
@@ -17,15 +22,17 @@ class User(BaseModel):
 
 class CreatePaymentRequest(BaseModel):
     ticket_id: str
+    voucher_code: Optional[str] = None
 
 
 class CreatePaymentResponse(BaseModel):
     id: str
-    payment_link: str
+    payment_link: Optional[str] = None
     created_at: datetime
     amount: int
     description: Optional[str] = None
     ticket: Optional[Ticket] = None
+    voucher: Optional[Voucher] = None
 
 
 class DetailPaymentResponse(BaseModel):

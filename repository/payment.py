@@ -18,6 +18,7 @@ def create_payment(
     status: PaymentStatus = PaymentStatus.UNPAID,
     mayar_id: Optional[str] = None,
     mayar_transaction_id: Optional[str] = None,
+    voucher_id: Optional[str] = None,
     is_commit: bool = True,
 ) -> Payment:
     now = datetime.now(timezone(TZ))
@@ -31,6 +32,7 @@ def create_payment(
         status=status,
         mayar_id=mayar_id,
         mayar_transaction_id=mayar_transaction_id,
+        voucher_id=voucher_id,
         created_at=now,
         paid_at=None,
     )
