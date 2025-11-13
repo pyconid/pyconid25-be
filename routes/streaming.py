@@ -4,7 +4,7 @@ import math
 from typing import Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pytz import timezone
 from sqlalchemy.orm import Session
@@ -38,9 +38,7 @@ from schemas.streaming import (
     StreamAnalyticsResponse,
     StreamAssetDetail,
     StreamAssetListItem,
-    StreamStatusResponse,
     TrackViewRequest,
-    UploadVideoResponse,
 )
 from settings import TZ
 
@@ -64,6 +62,8 @@ async def create_live_stream(
         current_user = get_user_from_token(db=db, token=token)
         if current_user is None:
             return common_response(Unauthorized(message="Unauthorized"))
+
+        # TODO: Check if user has permission to create live streams
 
         (
             mux_stream_id,
@@ -92,65 +92,6 @@ async def create_live_stream(
                     mux_stream_key=stream_key,
                     mux_stream_url=stream_url,
                     playback_url=None,
-                    status=stream_asset.status,
-                )
-            )
-        )
-    except Exception as e:
-        return common_response(InternalServerError(error=str(e)))
-
-
-@router.post(
-    "/upload",
-    responses={
-        "200": {"model": UploadVideoResponse},
-        "400": {"model": BadRequestResponse},
-        "401": {"model": UnauthorizedResponse},
-        "500": {"model": InternalServerErrorResponse},
-    },
-)
-async def upload_video(
-    title: str = Form(...),
-    description: Optional[str] = Form(None),
-    is_public: bool = Form(True),
-    schedule_id: Optional[str] = Form(None),
-    file: UploadFile = File(...),
-    db: Session = Depends(get_db_sync),
-    token: str = Depends(oauth2_scheme),
-):
-    try:
-        current_user = get_user_from_token(db=db, token=token)
-        if current_user is None:
-            return common_response(Unauthorized(message="Unauthorized"))
-
-        if file.content_type and not file.content_type.startswith("video/"):
-            return common_response(BadRequest(message="File must be a video"))
-
-        upload_id, upload_url = mux_service.create_direct_upload(is_public=is_public)
-
-        # TODO: Upload file to Mux using the upload_url
-        # For now, we'll create a placeholder asset
-        # In production, you would:
-        # 1. Upload file to Mux using upload_url
-        # 2. Wait for Mux webhook to confirm upload
-        # 3. Update stream_asset status to PROCESSING
-
-        stream_asset = streamingRepo.create_stream_asset(
-            db=db,
-            title=title,
-            description=description,
-            is_public=is_public,
-            is_live=False,
-            schedule_id=schedule_id,
-            mux_asset_id=upload_id,
-            status=StreamStatus.PROCESSING,
-        )
-
-        return common_response(
-            Ok(
-                data=UploadVideoResponse(
-                    stream_id=stream_asset.id,
-                    mux_asset_id=upload_id,
                     status=stream_asset.status,
                 )
             )
@@ -225,101 +166,6 @@ async def get_playback_url(
                     is_live=stream_asset.is_live,
                     status=stream_asset.status,
                     token_expires_at=token_expires_at,
-                )
-            )
-        )
-    except Exception as e:
-        return common_response(InternalServerError(error=str(e)))
-
-
-@router.post(
-    "/{stream_id}/start",
-    responses={
-        "200": {"model": StreamStatusResponse},
-        "400": {"model": BadRequestResponse},
-        "401": {"model": UnauthorizedResponse},
-        "404": {"model": NotFoundResponse},
-        "500": {"model": InternalServerErrorResponse},
-    },
-)
-async def start_stream(
-    stream_id: UUID,
-    db: Session = Depends(get_db_sync),
-    token: str = Depends(oauth2_scheme),
-):
-    try:
-        current_user = get_user_from_token(db=db, token=token)
-        if current_user is None:
-            return common_response(Unauthorized(message="Unauthorized"))
-
-        stream_asset = streamingRepo.get_stream_asset_by_id(db, stream_id)
-        if not stream_asset:
-            return common_response(NotFound(message="Stream not found"))
-
-        if not stream_asset.is_live:
-            return common_response(BadRequest(message="Cannot start a non-live stream"))
-
-        streamingRepo.update_stream_asset(
-            db=db,
-            stream_asset=stream_asset,
-            status=StreamStatus.STREAMING,
-            stream_started_at=datetime.now(timezone(TZ)),
-        )
-
-        return common_response(Ok(data=StreamStatusResponse(message="Stream started")))
-    except Exception as e:
-        return common_response(InternalServerError(error=str(e)))
-
-
-@router.post(
-    "/{stream_id}/stop",
-    responses={
-        "200": {"model": StreamStatusResponse},
-        "400": {"model": BadRequestResponse},
-        "401": {"model": UnauthorizedResponse},
-        "404": {"model": NotFoundResponse},
-        "500": {"model": InternalServerErrorResponse},
-    },
-)
-async def stop_stream(
-    stream_id: UUID,
-    db: Session = Depends(get_db_sync),
-    token: str = Depends(oauth2_scheme),
-):
-    try:
-        current_user = get_user_from_token(db=db, token=token)
-        if current_user is None:
-            return common_response(Unauthorized(message="Unauthorized"))
-
-        stream_asset = streamingRepo.get_stream_asset_by_id(db, stream_id)
-        if not stream_asset:
-            return common_response(NotFound(message="Stream not found"))
-
-        if not stream_asset.is_live:
-            return common_response(BadRequest(message="Cannot stop a non-live stream"))
-
-        duration = None
-        if stream_asset.stream_started_at:
-            duration = int(
-                (
-                    datetime.now(timezone(TZ)) - stream_asset.stream_started_at
-                ).total_seconds()
-            )
-
-        streamingRepo.update_stream_asset(
-            db=db,
-            stream_asset=stream_asset,
-            status=StreamStatus.ENDED,
-            stream_ended_at=datetime.utcnow(),
-            duration=duration,
-        )
-
-        return common_response(
-            Ok(
-                data=StreamStatusResponse(
-                    message="Stream stopped",
-                    duration=duration,
-                    max_viewers=stream_asset.max_concurrent_viewers,
                 )
             )
         )
