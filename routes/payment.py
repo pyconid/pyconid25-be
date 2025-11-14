@@ -331,6 +331,16 @@ async def get_payment_detail(
                 status = status_mapping.get(transaction_status, PaymentStatus.UNPAID)
 
                 if status != payment.status:
+                    if status == PaymentStatus.PAID:
+                        ticket: TicketModel = payment.ticket
+                        voucher: VoucherModel = payment.voucher
+
+                        if voucher and voucher.type:
+                            user.participant_type = voucher.type
+                        else:
+                            user.participant_type = ticket.user_participant_type
+                        db.add(user)
+
                     paymentRepo.update_payment(
                         db=db,
                         payment=payment,
