@@ -72,7 +72,7 @@ async def validate_voucher(
                 BadRequest(message="Silakan lengkapi email terlebih dahulu.")
             )
 
-        voucher = voucherRepo.get_voucher_by_code(db=db, code=code.strip().upper())
+        voucher = voucherRepo.get_voucher_by_code(db=db, code=code)
 
         if not voucher:
             return common_response(BadRequest(message="Invalid voucher code."))

@@ -113,7 +113,7 @@ def get_vouchers_per_page(
 
 
 def get_voucher_by_code(db: Session, code: str) -> Optional[Voucher]:
-    stmt = select(Voucher).where(Voucher.code == code)
+    stmt = select(Voucher).where(func.upper(Voucher.code) == code.strip().upper())
     voucher = db.execute(stmt).scalar()
     return voucher
 
@@ -124,7 +124,11 @@ def validate_and_use_voucher(
     user_email: str,
 ) -> tuple[Optional[Voucher], Optional[str]]:
     # Lock the voucher row for update to prevent race conditions
-    stmt = select(Voucher).where(Voucher.code == code).with_for_update()
+    stmt = (
+        select(Voucher)
+        .where(func.upper(Voucher.code) == code.strip().upper())
+        .with_for_update()
+    )
     voucher = db.execute(stmt).scalar()
 
     if not voucher:
