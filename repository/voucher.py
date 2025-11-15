@@ -110,3 +110,42 @@ def get_vouchers_per_page(
         "page_count": page_count,
         "results": results_schema,
     }
+
+
+def get_voucher_by_code(db: Session, code: str) -> Optional[Voucher]:
+    stmt = select(Voucher).where(func.upper(Voucher.code) == code.strip().upper())
+    voucher = db.execute(stmt).scalar()
+    return voucher
+
+
+def validate_and_use_voucher(
+    db: Session,
+    code: str,
+    user_email: str,
+) -> tuple[Optional[Voucher], Optional[str]]:
+    # Lock the voucher row for update to prevent race conditions
+    stmt = (
+        select(Voucher)
+        .where(func.upper(Voucher.code) == code.strip().upper())
+        .with_for_update()
+    )
+    voucher = db.execute(stmt).scalar()
+
+    if not voucher:
+        return None, "Invalid voucher code."
+
+    if not voucher.is_active:
+        return None, "Voucher is no longer valid."
+
+    if voucher.quota <= 0:
+        return None, "Voucher quota has been exhausted."
+
+    if voucher.email_whitelist:
+        whitelist = voucher.email_whitelist.get("emails", [])
+        if whitelist and user_email not in whitelist:
+            return None, "You are not authorized to use this voucher."
+
+    voucher.quota -= 1
+    db.flush()
+
+    return voucher, None

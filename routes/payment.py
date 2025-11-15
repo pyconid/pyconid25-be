@@ -23,12 +23,19 @@ from schemas.payment import (
     CreatePaymentResponse,
     DetailPaymentResponse,
     PaymentListResponse,
-    Ticket,
-    User,
+    Ticket as TicketSchema,
+    User as UserSchema,
+    Voucher as VoucherSchema,
+    VoucherValidateResponse,
 )
+from models.Voucher import Voucher as VoucherModel
 from models.User import User as UserModel
 from models.Ticket import Ticket as TicketModel
-from repository import payment as paymentRepo, ticket as ticketRepo
+from repository import (
+    payment as paymentRepo,
+    ticket as ticketRepo,
+    voucher as voucherRepo,
+)
 from core.mayar_service import MayarService
 from models.Payment import PaymentStatus
 from settings import (
@@ -39,6 +46,66 @@ from settings import (
 from core.log import logger
 
 router = APIRouter(prefix="/payment", tags=["Payment"])
+
+
+@router.get(
+    "/voucher/validate",
+    responses={
+        "200": {"model": VoucherValidateResponse},
+        "400": {"model": BadRequestResponse},
+        "401": {"model": UnauthorizedResponse},
+        "500": {"model": InternalServerErrorResponse},
+    },
+)
+async def validate_voucher(
+    code: str,
+    db: Session = Depends(get_db_sync),
+    token: str = Depends(oauth2_scheme),
+):
+    try:
+        user = get_user_from_token(db=db, token=token)
+        if user is None:
+            return common_response(Unauthorized(message="Unauthorized"))
+
+        if not user.email:
+            return common_response(
+                BadRequest(message="Silakan lengkapi email terlebih dahulu.")
+            )
+
+        voucher = voucherRepo.get_voucher_by_code(db=db, code=code)
+
+        if not voucher:
+            return common_response(BadRequest(message="Invalid voucher code."))
+
+        if not voucher.is_active:
+            return common_response(BadRequest(message="Voucher is no longer valid."))
+
+        if voucher.quota <= 0:
+            return common_response(
+                BadRequest(message="Voucher quota has been exhausted.")
+            )
+
+        if voucher.email_whitelist:
+            whitelist = voucher.email_whitelist.get("emails", [])
+            if whitelist and user.email not in whitelist:
+                return common_response(
+                    BadRequest(message="You are not authorized to use this voucher.")
+                )
+
+        return common_response(
+            Ok(
+                data=VoucherValidateResponse(
+                    code=voucher.code,
+                    value=voucher.value,
+                    type=voucher.type,
+                ).model_dump(mode="json")
+            )
+        )
+
+    except Exception as e:
+        traceback.print_exc()
+        logger.error(f"Error in validate_voucher: {e}")
+        return common_response(InternalServerError(error="Internal Server Error"))
 
 
 @router.post(
@@ -83,8 +150,28 @@ async def create_payment(
             db.rollback()
             return common_response(BadRequest(message="Ticket is sold out."))
 
+        voucher = None
+        voucher_participant_type = None
+        if request.voucher_code:
+            voucher, error_msg = voucherRepo.validate_and_use_voucher(
+                db=db, code=request.voucher_code, user_email=user.email
+            )
+            if error_msg or voucher is None:
+                db.rollback()
+                return common_response(
+                    BadRequest(message=error_msg or "Invalid voucher code.")
+                )
+
+            if voucher.type:
+                voucher_participant_type = voucher.type
+
         amount = ticket.price
+        if voucher:
+            # Apply voucher discount to amount, maximum to 0
+            amount = max(0, amount - voucher.value)
+
         description = ticket.description or ticket.name
+        status = PaymentStatus.UNPAID
 
         payment = paymentRepo.create_payment(
             db=db,
@@ -92,9 +179,45 @@ async def create_payment(
             amount=amount,
             ticket_id=str(ticket.id),
             description=description,
-            status=PaymentStatus.UNPAID,
+            status=status,
+            voucher_id=str(voucher.id) if voucher else None,
             is_commit=False,
         )
+
+        if amount <= 0:
+            user.participant_type = (
+                voucher_participant_type or ticket.user_participant_type
+            )
+            db.add(user)
+            paymentRepo.update_payment(
+                db=db,
+                payment=payment,
+                status=PaymentStatus.PAID,
+            )
+            db.commit()
+            db.refresh(payment)
+
+            return common_response(
+                Ok(
+                    data=CreatePaymentResponse(
+                        id=str(payment.id),
+                        payment_link=None,
+                        created_at=payment.created_at,
+                        amount=payment.amount,
+                        description=payment.description,
+                        ticket=TicketSchema(
+                            id=str(ticket.id),
+                            name=ticket.name,
+                        ),
+                        voucher=VoucherSchema(
+                            code=voucher.code,
+                            value=voucher.value,
+                        )
+                        if voucher
+                        else None,
+                    ).model_dump(mode="json")
+                )
+            )
 
         mayar_service = MayarService(api_key=MAYAR_API_KEY, base_url=MAYAR_BASE_URL)
 
@@ -145,10 +268,16 @@ async def create_payment(
                     created_at=payment.created_at,
                     amount=payment.amount,
                     description=payment.description,
-                    ticket=Ticket(
+                    ticket=TicketSchema(
                         id=str(ticket.id),
                         name=ticket.name,
                     ),
+                    voucher=VoucherSchema(
+                        code=voucher.code,
+                        value=voucher.value,
+                    )
+                    if voucher
+                    else None,
                 ).model_dump(mode="json")
             )
         )
@@ -181,7 +310,7 @@ async def list_payments(
         results = [
             DetailPaymentResponse(
                 id=str(payment.id),
-                user=User(
+                user=UserSchema(
                     id=str(user.id),
                     first_name=user.first_name,
                     last_name=user.last_name,
@@ -193,7 +322,7 @@ async def list_payments(
                 closed_at=payment.closed_at,
                 amount=payment.amount,
                 description=payment.description,
-                ticket=Ticket(
+                ticket=TicketSchema(
                     id=str(payment.ticket.id),
                     name=payment.ticket.name,
                 ),
@@ -263,6 +392,16 @@ async def get_payment_detail(
                 status = status_mapping.get(transaction_status, PaymentStatus.UNPAID)
 
                 if status != payment.status:
+                    if status == PaymentStatus.PAID:
+                        ticket: TicketModel = payment.ticket
+                        voucher: VoucherModel = payment.voucher
+
+                        if voucher and voucher.type:
+                            user.participant_type = voucher.type
+                        else:
+                            user.participant_type = ticket.user_participant_type
+                        db.add(user)
+
                     paymentRepo.update_payment(
                         db=db,
                         payment=payment,
@@ -277,7 +416,7 @@ async def get_payment_detail(
             Ok(
                 data=DetailPaymentResponse(
                     id=str(payment.id),
-                    user=User(
+                    user=UserSchema(
                         id=str(user.id),
                         first_name=user.first_name,
                         last_name=user.last_name,
@@ -289,7 +428,7 @@ async def get_payment_detail(
                     closed_at=payment.closed_at,
                     amount=payment.amount,
                     description=payment.description,
-                    ticket=Ticket(
+                    ticket=TicketSchema(
                         id=str(payment.ticket.id),
                         name=payment.ticket.name,
                     ),
@@ -368,7 +507,12 @@ async def payment_webhook(
             )
             user: UserModel = payment.user
             ticket: TicketModel = payment.ticket
-            user.participant_type = ticket.user_participant_type
+            voucher: VoucherModel = payment.voucher
+
+            if voucher and voucher.type:
+                user.participant_type = voucher.type
+            else:
+                user.participant_type = ticket.user_participant_type
             db.add(user)
             db.commit()
             logger.info(f"Payment {payment.id} updated to status {status} via webhook")
