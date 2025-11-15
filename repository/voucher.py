@@ -128,10 +128,10 @@ def validate_and_use_voucher(
     voucher = db.execute(stmt).scalar()
 
     if not voucher:
-        return None, "Voucher not found."
+        return None, "Invalid voucher code."
 
     if not voucher.is_active:
-        return None, "Voucher is not active."
+        return None, "Voucher is no longer valid."
 
     if voucher.quota <= 0:
         return None, "Voucher quota has been exhausted."

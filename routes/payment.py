@@ -26,6 +26,7 @@ from schemas.payment import (
     Ticket as TicketSchema,
     User as UserSchema,
     Voucher as VoucherSchema,
+    VoucherValidateResponse,
 )
 from models.Voucher import Voucher as VoucherModel
 from models.User import User as UserModel
@@ -45,6 +46,66 @@ from settings import (
 from core.log import logger
 
 router = APIRouter(prefix="/payment", tags=["Payment"])
+
+
+@router.get(
+    "/voucher/validate",
+    responses={
+        "200": {"model": VoucherValidateResponse},
+        "400": {"model": BadRequestResponse},
+        "401": {"model": UnauthorizedResponse},
+        "500": {"model": InternalServerErrorResponse},
+    },
+)
+async def validate_voucher(
+    code: str,
+    db: Session = Depends(get_db_sync),
+    token: str = Depends(oauth2_scheme),
+):
+    try:
+        user = get_user_from_token(db=db, token=token)
+        if user is None:
+            return common_response(Unauthorized(message="Unauthorized"))
+
+        if not user.email:
+            return common_response(
+                BadRequest(message="Silakan lengkapi email terlebih dahulu.")
+            )
+
+        voucher = voucherRepo.get_voucher_by_code(db=db, code=code.strip().upper())
+
+        if not voucher:
+            return common_response(BadRequest(message="Invalid voucher code."))
+
+        if not voucher.is_active:
+            return common_response(BadRequest(message="Voucher is no longer valid."))
+
+        if voucher.quota <= 0:
+            return common_response(
+                BadRequest(message="Voucher quota has been exhausted.")
+            )
+
+        if voucher.email_whitelist:
+            whitelist = voucher.email_whitelist.get("emails", [])
+            if whitelist and user.email not in whitelist:
+                return common_response(
+                    BadRequest(message="You are not authorized to use this voucher.")
+                )
+
+        return common_response(
+            Ok(
+                data=VoucherValidateResponse(
+                    code=voucher.code,
+                    value=voucher.value,
+                    type=voucher.type,
+                ).model_dump(mode="json")
+            )
+        )
+
+    except Exception as e:
+        traceback.print_exc()
+        logger.error(f"Error in validate_voucher: {e}")
+        return common_response(InternalServerError(error="Internal Server Error"))
 
 
 @router.post(

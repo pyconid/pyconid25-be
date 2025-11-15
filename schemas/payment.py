@@ -50,3 +50,13 @@ class DetailPaymentResponse(BaseModel):
 
 class PaymentListResponse(BaseModel):
     results: List[DetailPaymentResponse]
+
+
+class VoucherValidateRequest(BaseModel):
+    code: str
+
+
+class VoucherValidateResponse(BaseModel):
+    code: str
+    value: int
+    type: Optional[str] = None
