@@ -659,7 +659,7 @@ class TestPayment(IsolatedAsyncioTestCase):
 
         self.assertEqual(response.status_code, 400)
         data = response.json()
-        self.assertEqual(data["message"], "Voucher not found.")
+        self.assertEqual(data["message"], "Invalid voucher code.")
 
     async def test_create_payment_with_inactive_voucher(self):
         inactive_voucher = Voucher(
@@ -682,7 +682,7 @@ class TestPayment(IsolatedAsyncioTestCase):
 
         self.assertEqual(response.status_code, 400)
         data = response.json()
-        self.assertEqual(data["message"], "Voucher is not active.")
+        self.assertEqual(data["message"], "Voucher is no longer valid.")
 
     async def test_create_payment_with_voucher_quota_exhausted(self):
         exhausted_voucher = Voucher(
