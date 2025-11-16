@@ -34,3 +34,21 @@ class SpeakerResponse(BaseModel):
     count: int
     page_count: int
     results: List[SpeakerResponseItem]
+
+
+class SpeakerDetailResponse(BaseModel):
+    id: str
+    name: str
+    bio: Optional[str] = None
+    photo_url: Optional[str] = None
+    email: Optional[str] = None
+    instagram_link: Optional[str] = None
+    x_link: Optional[str] = None
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
+
+    class DetailSpeakerType(BaseModel):
+        id: str
+        name: str
+
+    speaker_type: Optional[DetailSpeakerType] = None
