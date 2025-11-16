@@ -33,12 +33,18 @@ class User(Base):
     first_name: Mapped[str] = mapped_column("first_name", String, nullable=True)
     last_name: Mapped[str] = mapped_column("last_name", String, nullable=True)
     email: Mapped[str] = mapped_column("email", String, nullable=True)
+    share_my_email_and_phone_number: Mapped[bool] = mapped_column(
+        "share_my_email_and_phone_number", Boolean, nullable=True
+    )
     industry_categories: Mapped[str] = mapped_column(
         "industry_categories", String, nullable=True
     )
     company: Mapped[str] = mapped_column("company", String, nullable=True)
     job_category: Mapped[str] = mapped_column("job_category", String, nullable=True)
     job_title: Mapped[str] = mapped_column("job_title", String, nullable=True)
+    share_my_job_and_company: Mapped[bool] = mapped_column(
+        "share_my_job_and_company", Boolean, nullable=True
+    )
     experience: Mapped[int] = mapped_column("experience", String, nullable=True)
     t_shirt_size: Mapped[str] = mapped_column("t_shirt_size", String, nullable=True)
     gender: Mapped[str] = mapped_column("gender", String, nullable=True)
@@ -55,8 +61,14 @@ class User(Base):
     )
     zip_code: Mapped[int] = mapped_column("zip_code", String, nullable=True)
     address: Mapped[str] = mapped_column("address", String, nullable=True)
+    share_my_location: Mapped[bool] = mapped_column(
+        "share_my_location", Boolean, nullable=True
+    )
     bio: Mapped[str] = mapped_column("bio", String, nullable=True)
     interest: Mapped[str] = mapped_column("interest", String, nullable=True)
+    share_my_interest: Mapped[bool] = mapped_column(
+        "share_my_interest", Boolean, nullable=True
+    )
     looking_for: Mapped[str] = mapped_column("looking_for", String, nullable=True)
     expertise: Mapped[str] = mapped_column("expertise", String, nullable=True)
     website: Mapped[str] = mapped_column("website", String, nullable=True)
@@ -71,6 +83,9 @@ class User(Base):
     )
     instagram_username: Mapped[str] = mapped_column(
         "instagram_username", String, nullable=True
+    )
+    share_my_public_social_media: Mapped[bool] = mapped_column(
+        "share_my_public_social_media", Boolean, nullable=True
     )
     terms_agreed: Mapped[bool] = mapped_column(
         "terms_agreed", Boolean, nullable=True, default=False

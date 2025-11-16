@@ -27,6 +27,13 @@ class Payment(Base):
         nullable=False,
         index=True,
     )
+    voucher_id: Mapped[str] = mapped_column(
+        "voucher_id",
+        UUID(as_uuid=True),
+        ForeignKey("voucher.id"),
+        nullable=True,
+        index=True,
+    )
     payment_link: Mapped[str] = mapped_column("payment_link", String, nullable=True)
     status: Mapped[str] = mapped_column(
         "status", String, nullable=False, default=PaymentStatus.UNPAID
@@ -45,3 +52,4 @@ class Payment(Base):
     # Relationship
     user = relationship("User", backref="payments_user")
     ticket = relationship("Ticket", backref="payments_ticket")
+    voucher = relationship("Voucher", backref="payments_voucher")
