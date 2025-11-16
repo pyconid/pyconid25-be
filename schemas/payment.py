@@ -7,11 +7,13 @@ from models.Payment import PaymentStatus
 class Ticket(BaseModel):
     id: str
     name: str
+    participant_type: str
 
 
 class Voucher(BaseModel):
     code: str
     value: int
+    participant_type: Optional[str] = None
 
 
 class User(BaseModel):

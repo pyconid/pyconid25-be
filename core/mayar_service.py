@@ -146,3 +146,54 @@ class MayarService:
             logger.error(f"Unexpected error during payment status retrieval: {repr(e)}")
             logger.debug(traceback.format_exc())
             raise
+
+    async def close_payment(self, payment_id: str) -> Dict[str, Any]:
+        """
+        Close a payment on Mayar.
+
+        Args:
+            payment_id: Payment ID from Mayar
+
+        Returns:
+            Dict with response from Mayar API:
+            {
+                "statusCode": 200,
+                "messages": "success" or "failed"
+            }
+
+        Raises:
+            httpx.HTTPError: If the request fails
+        """
+        endpoint = f"{self.base_url}/v1/payment/close/{payment_id}"
+
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    endpoint,
+                    headers=self.headers,
+                    timeout=30.0,
+                )
+                response.raise_for_status()
+                result = response.json()
+
+                if result.get("messages") == "success":
+                    logger.info(f"Payment {payment_id} closed successfully on Mayar")
+                else:
+                    logger.warning(
+                        f"Failed to close payment {payment_id} on Mayar: {result}"
+                    )
+
+                return result
+        except httpx.HTTPStatusError as e:
+            logger.error(
+                f"Mayar API returned error {e.response.status_code}: {e.response.text}"
+            )
+            logger.debug(f"Request URL: {e.request.url}")
+            raise
+        except httpx.RequestError as e:
+            logger.error(f"Request to Mayar failed: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error during payment closure: {repr(e)}")
+            logger.debug(traceback.format_exc())
+            raise

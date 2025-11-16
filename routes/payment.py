@@ -48,6 +48,41 @@ from core.log import logger
 router = APIRouter(prefix="/payment", tags=["Payment"])
 
 
+async def close_unpaid_payments_with_mayar(
+    db: Session,
+    user_id: str,
+    exclude_payment_id: str,
+    mayar_service: MayarService,
+) -> int:
+    payments_to_close = paymentRepo.get_payments_by_user_id(
+        db=db,
+        user_id=user_id,
+        status=PaymentStatus.UNPAID,
+        exclude_payment_id=exclude_payment_id,
+    )
+
+    closed_count = 0
+    for payment in payments_to_close:
+        if payment.mayar_id:
+            try:
+                await mayar_service.close_payment(payment_id=payment.mayar_id)
+                logger.info(
+                    f"Closed payment {payment.id} in Mayar (mayar_id: {payment.mayar_id})"
+                )
+            except Exception as e:
+                logger.error(f"Failed to close payment {payment.id} in Mayar: {e}")
+
+        paymentRepo.update_payment(
+            db=db,
+            payment=payment,
+            status=PaymentStatus.CLOSED,
+            is_commit=False,
+        )
+        closed_count += 1
+
+    return closed_count
+
+
 @router.get(
     "/voucher/validate",
     responses={
@@ -141,6 +176,15 @@ async def create_payment(
                 )
             )
 
+        checked_payment = paymentRepo.get_user_paid_payment(
+            db=db,
+            user_id=str(user.id),
+        )
+        if checked_payment:
+            return common_response(
+                BadRequest(message="You have already made a paid payment.")
+            )
+
         ticket = ticketRepo.get_active_ticket_by_id(db=db, ticket_id=request.ticket_id)
         if not ticket:
             db.rollback()
@@ -208,10 +252,12 @@ async def create_payment(
                         ticket=TicketSchema(
                             id=str(ticket.id),
                             name=ticket.name,
+                            participant_type=ticket.user_participant_type,
                         ),
                         voucher=VoucherSchema(
                             code=voucher.code,
                             value=voucher.value,
+                            participant_type=voucher.type,
                         )
                         if voucher
                         else None,
@@ -271,10 +317,12 @@ async def create_payment(
                     ticket=TicketSchema(
                         id=str(ticket.id),
                         name=ticket.name,
+                        participant_type=ticket.user_participant_type,
                     ),
                     voucher=VoucherSchema(
                         code=voucher.code,
                         value=voucher.value,
+                        participant_type=voucher.type,
                     )
                     if voucher
                     else None,
@@ -325,6 +373,7 @@ async def list_payments(
                 ticket=TicketSchema(
                     id=str(payment.ticket.id),
                     name=payment.ticket.name,
+                    participant_type=payment.ticket.user_participant_type,
                 ),
             )
             for payment in payments
@@ -377,7 +426,7 @@ async def get_payment_detail(
 
         mayar_service = MayarService(api_key=MAYAR_API_KEY, base_url=MAYAR_BASE_URL)
         try:
-            if payment.mayar_id and payment.status != PaymentStatus.PAID:
+            if payment.mayar_id and payment.status == PaymentStatus.UNPAID:
                 mayar_status_response = await mayar_service.get_payment_status(
                     payment_id=payment.mayar_id
                 )
@@ -401,6 +450,17 @@ async def get_payment_detail(
                         else:
                             user.participant_type = ticket.user_participant_type
                         db.add(user)
+
+                        closed_count = await close_unpaid_payments_with_mayar(
+                            db=db,
+                            user_id=str(user.id),
+                            exclude_payment_id=payment_id,
+                            mayar_service=mayar_service,
+                        )
+                        if closed_count > 0:
+                            logger.info(
+                                f"Closed {closed_count} other unpaid payment(s) for user {user.id}"
+                            )
 
                     paymentRepo.update_payment(
                         db=db,
@@ -431,6 +491,7 @@ async def get_payment_detail(
                     ticket=TicketSchema(
                         id=str(payment.ticket.id),
                         name=payment.ticket.name,
+                        participant_type=payment.ticket.user_participant_type,
                     ),
                 ).model_dump(mode="json")
             )
@@ -514,6 +575,22 @@ async def payment_webhook(
             else:
                 user.participant_type = ticket.user_participant_type
             db.add(user)
+
+            if status == PaymentStatus.PAID:
+                mayar_service = MayarService(
+                    api_key=MAYAR_API_KEY, base_url=MAYAR_BASE_URL
+                )
+                closed_count = await close_unpaid_payments_with_mayar(
+                    db=db,
+                    user_id=str(user.id),
+                    exclude_payment_id=str(payment.id),
+                    mayar_service=mayar_service,
+                )
+                if closed_count > 0:
+                    logger.info(
+                        f"Closed {closed_count} other unpaid payment(s) for user {user.id}"
+                    )
+
             db.commit()
             logger.info(f"Payment {payment.id} updated to status {status} via webhook")
 
