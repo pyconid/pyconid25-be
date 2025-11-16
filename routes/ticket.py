@@ -4,9 +4,10 @@ from models import get_db_sync
 from repository.ticket import get_active_tickets
 from repository import payment as paymentRepo
 from schemas.ticket import (
+    MyTicketResponse,
     TicketListResponse,
     TicketResponse,
-    MyTicketResponse,
+    MyTicket,
     MyTicketInfo,
     MyTicketPayment,
     MyTicketVoucher,
@@ -70,7 +71,7 @@ async def get_my_ticket(
         ticket = payment.ticket
         voucher = payment.voucher
 
-        response_data = MyTicketResponse(
+        response_data = MyTicket(
             ticket=MyTicketInfo(
                 id=str(ticket.id),
                 name=ticket.name,

@@ -36,7 +36,12 @@ class MyTicketPayment(BaseModel):
     voucher: Optional[MyTicketVoucher] = None
 
 
-class MyTicketResponse(BaseModel):
+class MyTicket(BaseModel):
     ticket: MyTicketInfo
     payment: MyTicketPayment
     participant_type: str
+
+
+class MyTicketResponse(BaseModel):
+    data: Optional[MyTicket] = None
+    message: str
