@@ -570,13 +570,13 @@ async def payment_webhook(
             ticket: TicketModel = payment.ticket
             voucher: VoucherModel = payment.voucher
 
-            if voucher and voucher.type:
-                user.participant_type = voucher.type
-            else:
-                user.participant_type = ticket.user_participant_type
-            db.add(user)
-
             if status == PaymentStatus.PAID:
+                if voucher and voucher.type:
+                    user.participant_type = voucher.type
+                else:
+                    user.participant_type = ticket.user_participant_type
+                db.add(user)
+
                 mayar_service = MayarService(
                     api_key=MAYAR_API_KEY, base_url=MAYAR_BASE_URL
                 )

@@ -83,12 +83,14 @@ def update_payment(
     mayar_transaction_id: Optional[str] = None,
     is_commit: bool = True,
 ) -> Payment:
+    now = datetime.now(timezone(TZ))
     if status is not None:
         payment.status = status.value if isinstance(status, PaymentStatus) else status
         if status == PaymentStatus.PAID and payment.paid_at is None:
-            payment.paid_at = datetime.now(timezone(TZ))
+            payment.paid_at = now
         elif status == PaymentStatus.CLOSED and payment.closed_at is None:
-            payment.closed_at = datetime.now(timezone(TZ))
+            payment.closed_at = now
+
     if mayar_id is not None:
         payment.mayar_id = mayar_id
     if mayar_transaction_id is not None:
