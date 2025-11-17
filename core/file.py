@@ -19,7 +19,7 @@ async def upload_file(upload_file: UploadFile, path: str) -> str:
     return path
 
 
-def get_file_from_local(
+def get_file(
     path: str,
 ) -> Optional[FileResponse]:
     path = f"{FILE_STORAGE_PATH}/{path}"

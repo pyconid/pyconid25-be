@@ -1,8 +1,9 @@
 from datetime import datetime
 from typing import Optional
 from fastapi import APIRouter, Depends, File, Form, UploadFile
+from fastapi.responses import FileResponse
 from pytz import timezone
-from core.file import is_over_max_file_size, upload_file
+from core.file import get_file, is_over_max_file_size, upload_file
 from core.security import get_current_user
 from models.User import MANAGEMENT_PARTICIPANT, User
 from schemas.speaker import SpeakerDetailResponse, SpeakerQuery, SpeakerResponse
@@ -53,6 +54,9 @@ async def get_speaker(
                 search=query.search,
             )
     except Exception as e:
+        import traceback
+
+        traceback.print_exc()
         return common_response(InternalServerError(error=str(e)))
     return SpeakerResponse.model_validate(data)
 
@@ -138,6 +142,12 @@ async def create_speaker(
 
     photo_url = None
     if photo is not None:
+        ext = photo.filename.split(".")[-1].lower()
+        if ext not in ["jpg", "jpeg", "png"]:
+            return common_response(
+                BadRequest(error="Invalid file type. Only image files are allowed.")
+            )
+
         if is_over_max_file_size(upload_file=photo):
             return common_response(
                 BadRequest(
@@ -301,3 +311,16 @@ async def delete_speaker_by_id(
     speakerRepo.delete_speaker(db=db, speaker=data, is_commit=True)
 
     return common_response(NoContent())
+
+
+@router.get(
+    "/photo/{filename}",
+    response_class=FileResponse,
+)
+async def get_speaker_photo(
+    filename: str,
+):
+    data = get_file(path=filename)
+    if data is None:
+        return common_response(NotFound(error=f"File {filename} not found"))
+    return data

@@ -4,6 +4,8 @@ from pydantic import BaseModel
 from uuid import UUID
 from datetime import datetime
 
+from schemas.speaker_type import DetailSpeakerResponse
+
 
 class SpeakerQuery(BaseModel):
     page: int = Query(1, description="Page Number")
@@ -22,7 +24,8 @@ class SpeakerResponseItem(BaseModel):
     x_link: Optional[str] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
-    is_keynote_speaker: Optional[bool] = None
+    speaker_type: Optional[DetailSpeakerResponse] = None
+    # is_keynote_speaker: Optional[bool] = None
     model_config = {
         "from_attributes": True  # ⬅️ penting biar bisa baca dari SQLAlchemy ORM object
     }

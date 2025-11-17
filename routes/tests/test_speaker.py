@@ -100,7 +100,7 @@ class TestSpeaker(IsolatedAsyncioTestCase):
         # Expect 2
         self.assertEqual(response.status_code, 403)
 
-    async def test_create_speaker(self):
+    async def test_create_speaker_and_get_speaker_photo(self):
         # Given
         user_management = User(
             id="123e4567-e89b-12d3-a456-426614174000",
@@ -167,6 +167,12 @@ class TestSpeaker(IsolatedAsyncioTestCase):
 
         # Expect 2
         self.assertEqual(response.status_code, 403)
+
+        # When 3
+        response = client.get(f"/speaker/photo/{speaker.photo_url}")
+
+        # Expect 3
+        self.assertEqual(response.status_code, 200)
 
     async def test_update_speaker(self):
         # Given
