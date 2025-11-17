@@ -8,6 +8,7 @@ from main import app
 from models.Speaker import Speaker
 from models.Schedule import Schedule
 from models import engine, db, get_db_sync, get_db_sync_for_test
+from models.SpeakerType import SpeakerType
 
 
 class TestSpeakerAndSchedule(IsolatedAsyncioTestCase):
@@ -33,6 +34,8 @@ class TestSpeakerAndSchedule(IsolatedAsyncioTestCase):
     # --------------------------------------------------
     async def test_get_speaker_pagination(self):
         """Test get_speaker endpoint with pagination and search"""
+        st = SpeakerType(id=uuid.uuid4(), name="Keynote Speaker")
+        self.db.add(st)
         # Given — buat 3 speaker dummy
         speaker1 = Speaker(
             id=uuid.uuid4(),
@@ -43,6 +46,7 @@ class TestSpeakerAndSchedule(IsolatedAsyncioTestCase):
             instagram_link="https://instagram.com/fachri",
             x_link="https://x.com/fachri",
             is_keynote_speaker=True,
+            speaker_type=st,
         )
         speaker2 = Speaker(
             id=uuid.uuid4(),
@@ -119,7 +123,6 @@ class TestSpeakerAndSchedule(IsolatedAsyncioTestCase):
         # When
         response = self.client.get("/schedule/?page=1&page_size=5")
         data = response.json()
-        print(data)
 
         # Then
         self.assertEqual(response.status_code, 200)

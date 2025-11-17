@@ -1,8 +1,8 @@
 import datetime
 import uuid
 from models import Base
-from sqlalchemy import UUID, Boolean, DateTime, String
-from sqlalchemy.orm import mapped_column, Mapped
+from sqlalchemy import UUID, Boolean, DateTime, ForeignKey, String
+from sqlalchemy.orm import mapped_column, Mapped, relationship
 
 
 class Speaker(Base):
@@ -17,7 +17,9 @@ class Speaker(Base):
     email: Mapped[str] = mapped_column("email", String, nullable=True)
     instagram_link: Mapped[str] = mapped_column("instagram_link", String, nullable=True)
     x_link: Mapped[str] = mapped_column("x_link", String, nullable=True)
-
+    speaker_type_id: Mapped[str] = mapped_column(
+        "speaker_type_id", ForeignKey("speaker_type.id"), nullable=True
+    )
     created_at = mapped_column(
         "created_at",
         DateTime(timezone=True),
@@ -33,3 +35,6 @@ class Speaker(Base):
     is_keynote_speaker: Mapped[bool] = mapped_column(
         "is_keynote_speaker", Boolean, default=False
     )
+
+    # Relationships
+    speaker_type = relationship("SpeakerType", backref="speaker_speaker_type")
