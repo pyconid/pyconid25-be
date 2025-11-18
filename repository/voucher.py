@@ -5,6 +5,12 @@ from models.Voucher import Voucher
 from schemas.voucher import VoucherResponseItem
 
 
+def get_voucher_by_id(db: Session, id: str) -> Optional[Voucher]:
+    query = select(Voucher).where(Voucher.id == id)
+    voucher = db.execute(query).scalar()
+    return voucher
+
+
 def insert_voucher(
     db: Session,
     code: str,
@@ -25,6 +31,28 @@ def insert_voucher(
     db.add(voucher)
     db.commit()
     db.refresh(voucher)
+    return voucher
+
+
+def update_voucher(
+    db: Session,
+    voucher: Voucher,
+    code: Optional[str] = None,
+    value: Optional[int] = None,
+    quota: Optional[int] = None,
+    type: Optional[str] = None,
+    email_whitelist: Optional[dict] = None,
+    is_active: Optional[bool] = None,
+    is_commit: bool = True,
+) -> Optional[Voucher]:
+    voucher.code = code
+    voucher.value = value
+    voucher.quota = quota
+    voucher.type = type
+    voucher.email_whitelist = email_whitelist
+    voucher.is_active = is_active
+    if is_commit:
+        db.commit()
     return voucher
 
 
