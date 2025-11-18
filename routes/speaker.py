@@ -1,12 +1,17 @@
 from datetime import datetime
-from typing import Optional
-from fastapi import APIRouter, Depends, File, Form, UploadFile
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, Depends
 from pytz import timezone
-from core.file import get_file, is_over_max_file_size, upload_file
 from core.security import get_current_user
 from models.User import MANAGEMENT_PARTICIPANT, User
-from schemas.speaker import SpeakerDetailResponse, SpeakerQuery, SpeakerResponse
+from schemas.speaker import (
+    CreateSpeakerRequest,
+    CreateSpeakerResponse,
+    SpeakerDetailResponse,
+    SpeakerQuery,
+    SpeakerResponse,
+    UpdateSpeakerRequest,
+    UpdateSpeakerResponse,
+)
 from sqlalchemy.orm import Session
 from core.responses import (
     BadRequest,
@@ -15,6 +20,7 @@ from core.responses import (
     NoContent,
     NotFound,
     Ok,
+    Unauthorized,
     common_response,
 )
 from models import get_db_sync
@@ -28,7 +34,7 @@ from schemas.common import (
 )
 from repository import speaker as speakerRepo
 from repository import speaker_type as speakerTypeRepo
-from settings import MAX_FILE_SIZE_MB
+from repository import user as userRepo
 
 router = APIRouter(prefix="/speaker", tags=["Speaker"])
 
@@ -74,6 +80,9 @@ async def get_speaker(
 async def get_speaker_by_id(
     id: str, db: Session = Depends(get_db_sync), user: User = Depends(get_current_user)
 ):
+    if user is None:
+        return common_response(Unauthorized(message="Unauthorized"))
+
     if user.participant_type != MANAGEMENT_PARTICIPANT:
         return common_response(Forbidden())
 
@@ -85,18 +94,17 @@ async def get_speaker_by_id(
         Ok(
             data=SpeakerDetailResponse(
                 id=str(data.id),
-                name=data.name,
-                bio=data.bio,
-                photo_url=data.photo_url,
-                email=data.email,
-                instagram_link=data.instagram_link,
-                x_link=data.x_link,
-                created_at=data.created_at.astimezone(
-                    timezone("Asia/Jakarta")
-                ).strftime("%Y-%m-%d %H:%M:%S"),
-                updated_at=data.updated_at.astimezone(
-                    timezone("Asia/Jakarta")
-                ).strftime("%Y-%m-%d %H:%M:%S"),
+                user=SpeakerDetailResponse.DetailUser(
+                    id=str(data.user.id),
+                    first_name=data.user.first_name,
+                    last_name=data.user.last_name,
+                    username=data.user.username,
+                    bio=data.user.bio,
+                    profile_picture=data.user.profile_picture,
+                    email=data.user.email,
+                    instagram_username=data.user.instagram_username,
+                    twitter_username=data.user.twitter_username,
+                ),
                 speaker_type=SpeakerDetailResponse.DetailSpeakerType(
                     id=str(data.speaker_type.id),
                     name=data.speaker_type.name,
@@ -111,88 +119,65 @@ async def get_speaker_by_id(
 @router.post(
     "/",
     responses={
-        "200": {"model": SpeakerDetailResponse},
+        "200": {"model": CreateSpeakerResponse},
         "400": {"model": BadRequestResponse},
+        "401": {"model": UnauthorizedResponse},
         "403": {"model": ForbiddenResponse},
         "500": {"model": InternalServerErrorResponse},
     },
 )
 async def create_speaker(
-    name: str = Form(),
-    bio: Optional[str] = Form(None),
-    photo: Optional[UploadFile] = File(None),
-    email: Optional[str] = Form(None),
-    instagram_link: Optional[str] = Form(None),
-    x_link: Optional[str] = Form(None),
-    speaker_type_id: Optional[str] = Form(None),
+    request: CreateSpeakerRequest,
     db: Session = Depends(get_db_sync),
     user: User = Depends(get_current_user),
 ):
+    if user is None:
+        return common_response(Unauthorized(message="Unauthorized"))
+
     if user.participant_type != MANAGEMENT_PARTICIPANT:
         return common_response(Forbidden())
 
     # Validation
     speaker_type = None
-    if speaker_type_id:
-        speaker_type = speakerTypeRepo.get_speaker_type_by_id(db=db, id=speaker_type_id)
+    if request.speaker_type_id:
+        speaker_type = speakerTypeRepo.get_speaker_type_by_id(
+            db=db, id=request.speaker_type_id
+        )
         if speaker_type is None:
             return common_response(
-                BadRequest(error=f"Speaker type with id {speaker_type_id} not found")
-            )
-
-    photo_url = None
-    if photo is not None:
-        ext = photo.filename.split(".")[-1].lower()
-        if ext not in ["jpg", "jpeg", "png"]:
-            return common_response(
-                BadRequest(error="Invalid file type. Only image files are allowed.")
-            )
-
-        if is_over_max_file_size(upload_file=photo):
-            return common_response(
                 BadRequest(
-                    error=f"File size exceeds the maximum limit ({MAX_FILE_SIZE_MB} mb)"
+                    message=f"Speaker type with id {request.speaker_type_id} not found"
                 )
             )
-        now = datetime.now().astimezone(timezone("Asia/Jakarta"))
-        photo_url = (
-            f"{name}-profile-photo-{now.strftime('%Y%m%d%H%M%S')}-{photo.filename}"
-        )
-        await upload_file(upload_file=photo, path=photo_url)
 
+    user = userRepo.get_user_by_id(db=db, id=request.user_id)
+    if user is None:
+        return common_response(
+            BadRequest(message=f"User with id {request.user_id} not found")
+        )
+
+    now = datetime.now().astimezone(timezone("Asia/Jakarta"))
     new_speaker = speakerRepo.create_speaker(
         db=db,
-        name=name,
-        bio=bio,
-        photo_url=photo_url,
-        email=email,
-        instagram_link=instagram_link,
-        x_link=x_link,
+        user=user,
         speaker_type=speaker_type,
+        now=now,
         is_commit=True,
     )
     return common_response(
         Ok(
-            data=SpeakerDetailResponse(
+            data=CreateSpeakerResponse(
                 id=str(new_speaker.id),
-                name=new_speaker.name,
-                bio=new_speaker.bio,
-                photo_url=new_speaker.photo_url,
-                email=new_speaker.email,
-                instagram_link=new_speaker.instagram_link,
-                x_link=new_speaker.x_link,
+                user_id=str(new_speaker.user.id),
+                speaker_type_id=str(new_speaker.speaker_type.id)
+                if new_speaker.speaker_type
+                else None,
                 created_at=new_speaker.created_at.astimezone(
                     timezone("Asia/Jakarta")
                 ).strftime("%Y-%m-%d %H:%M:%S"),
                 updated_at=new_speaker.updated_at.astimezone(
                     timezone("Asia/Jakarta")
                 ).strftime("%Y-%m-%d %H:%M:%S"),
-                speaker_type=SpeakerDetailResponse.DetailSpeakerType(
-                    id=str(new_speaker.speaker_type.id),
-                    name=new_speaker.speaker_type.name,
-                )
-                if new_speaker.speaker_type
-                else None,
             ).model_dump()
         )
     )
@@ -201,8 +186,9 @@ async def create_speaker(
 @router.put(
     "/{id}",
     responses={
-        "200": {"model": SpeakerDetailResponse},
+        "200": {"model": UpdateSpeakerResponse},
         "400": {"model": BadRequestResponse},
+        "401": {"model": UnauthorizedResponse},
         "403": {"model": ForbiddenResponse},
         "404": {"model": NotFoundResponse},
         "500": {"model": InternalServerErrorResponse},
@@ -210,80 +196,60 @@ async def create_speaker(
 )
 async def update_speaker(
     id: str,
-    name: str = Form(),
-    bio: Optional[str] = Form(None),
-    photo: Optional[UploadFile] = File(None),
-    email: Optional[str] = Form(None),
-    instagram_link: Optional[str] = Form(None),
-    x_link: Optional[str] = Form(None),
-    speaker_type_id: Optional[str] = Form(None),
+    request: UpdateSpeakerRequest,
     db: Session = Depends(get_db_sync),
     user: User = Depends(get_current_user),
 ):
+    if user is None:
+        return common_response(Unauthorized(message="Unauthorized"))
+
     if user.participant_type != MANAGEMENT_PARTICIPANT:
         return common_response(Forbidden())
 
     existing_speaker = speakerRepo.get_speaker_by_id(db=db, id=id)
     if existing_speaker is None:
-        return common_response(NotFound(error=f"Speaker with {id} not found"))
+        return common_response(NotFound(message=f"Speaker with {id} not found"))
 
     # Validation
     speaker_type = None
-    if speaker_type_id:
-        speaker_type = speakerTypeRepo.get_speaker_type_by_id(db=db, id=speaker_type_id)
+    if request.speaker_type_id:
+        speaker_type = speakerTypeRepo.get_speaker_type_by_id(
+            db=db, id=request.speaker_type_id
+        )
         if speaker_type is None:
             return common_response(
-                BadRequest(error=f"Speaker type with id {speaker_type_id} not found")
-            )
-
-    photo_url = None
-    if photo is not None:
-        if is_over_max_file_size(upload_file=photo):
-            return common_response(
                 BadRequest(
-                    error=f"File size exceeds the maximum limit ({MAX_FILE_SIZE_MB} mb)"
+                    message=f"Speaker type with id {request.speaker_type_id} not found"
                 )
             )
-        now = datetime.now().astimezone(timezone("Asia/Jakarta"))
-        photo_url = (
-            f"{name}-profile-photo-{now.strftime('%Y%m%d%H%M%S')}-{photo.filename}"
+
+    user = userRepo.get_user_by_id(db=db, id=request.user_id)
+    if user is None:
+        return common_response(
+            BadRequest(message=f"User with id {request.user_id} not found")
         )
-        await upload_file(upload_file=photo, path=photo_url)
 
     updated_speaker = speakerRepo.update_speaker(
         db=db,
         speaker=existing_speaker,
-        name=name,
-        bio=bio,
-        photo_url=photo_url,
-        email=email,
-        instagram_link=instagram_link,
-        x_link=x_link,
+        user=user,
         speaker_type=speaker_type,
         is_commit=True,
     )
     return common_response(
         Ok(
-            data=SpeakerDetailResponse(
+            data=UpdateSpeakerResponse(
                 id=str(updated_speaker.id),
-                name=updated_speaker.name,
-                bio=updated_speaker.bio,
-                photo_url=updated_speaker.photo_url,
-                email=updated_speaker.email,
-                instagram_link=updated_speaker.instagram_link,
-                x_link=updated_speaker.x_link,
+                user_id=str(updated_speaker.user.id),
+                speaker_type_id=str(updated_speaker.speaker_type.id)
+                if updated_speaker.speaker_type
+                else None,
                 created_at=updated_speaker.created_at.astimezone(
                     timezone("Asia/Jakarta")
                 ).strftime("%Y-%m-%d %H:%M:%S"),
                 updated_at=updated_speaker.updated_at.astimezone(
                     timezone("Asia/Jakarta")
                 ).strftime("%Y-%m-%d %H:%M:%S"),
-                speaker_type=SpeakerDetailResponse.DetailSpeakerType(
-                    id=str(updated_speaker.speaker_type.id),
-                    name=updated_speaker.speaker_type.name,
-                )
-                if updated_speaker.speaker_type
-                else None,
             ).model_dump()
         )
     )
@@ -293,6 +259,7 @@ async def update_speaker(
     "/{id}",
     responses={
         "204": {"model": NoContentResponse},
+        "401": {"model": UnauthorizedResponse},
         "403": {"model": ForbiddenResponse},
         "404": {"model": NotFoundResponse},
         "500": {"model": InternalServerErrorResponse},
@@ -301,6 +268,9 @@ async def update_speaker(
 async def delete_speaker_by_id(
     id: str, db: Session = Depends(get_db_sync), user: User = Depends(get_current_user)
 ):
+    if user is None:
+        return common_response(Unauthorized(message="Unauthorized"))
+
     if user.participant_type != MANAGEMENT_PARTICIPANT:
         return common_response(Forbidden())
 
@@ -311,16 +281,3 @@ async def delete_speaker_by_id(
     speakerRepo.delete_speaker(db=db, speaker=data, is_commit=True)
 
     return common_response(NoContent())
-
-
-@router.get(
-    "/photo/{filename}",
-    response_class=FileResponse,
-)
-async def get_speaker_photo(
-    filename: str,
-):
-    data = get_file(path=filename)
-    if data is None:
-        return common_response(NotFound(error=f"File {filename} not found"))
-    return data

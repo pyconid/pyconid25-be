@@ -1,8 +1,11 @@
+from datetime import datetime
 from typing import Optional
+from pytz import timezone
 from sqlalchemy import select, func
 from sqlalchemy.orm import Session
 from models.Speaker import Speaker
 from models.SpeakerType import SpeakerType
+from models.User import User
 from schemas.speaker import SpeakerResponseItem
 
 
@@ -43,8 +46,12 @@ def get_speaker_per_page_by_search(
 
     # Jika ada keyword pencarian
     if search:
-        stmt = stmt.where(
-            Speaker.name.ilike(f"%{search}%"),
+        search_pattern = f"%{search}%"
+        stmt = stmt.join(User, Speaker.user).where(
+            (User.username.ilike(search_pattern))
+            | (User.first_name.ilike(search_pattern))
+            | (User.last_name.ilike(search_pattern))
+            | (User.email.ilike(search_pattern))
         )
 
     # Hitung total data sebelum pagination
@@ -77,23 +84,18 @@ def get_speaker_by_id(db: Session, id: str) -> Optional[Speaker]:
 
 def create_speaker(
     db: Session,
-    name: str,
-    bio: Optional[str] = None,
-    photo_url: Optional[str] = None,
-    email: Optional[str] = None,
-    instagram_link: Optional[str] = None,
-    x_link: Optional[str] = None,
+    user: User,
     speaker_type: Optional[SpeakerType] = None,
+    now: Optional[datetime] = None,
     is_commit: bool = True,
 ) -> Speaker:
+    if now is None:
+        now = datetime.now().astimezone(timezone("Asia/Jakarta"))
     new_speaker = Speaker(
-        name=name,
-        bio=bio,
-        email=email,
-        instagram_link=instagram_link,
-        x_link=x_link,
+        user=user,
         speaker_type=speaker_type,
-        photo_url=photo_url,
+        created_at=now,
+        updated_at=now,
     )
     db.add(new_speaker)
     if is_commit:
@@ -104,23 +106,16 @@ def create_speaker(
 def update_speaker(
     db: Session,
     speaker: Speaker,
-    name: str,
-    bio: Optional[str] = None,
-    photo_url: Optional[str] = None,
-    email: Optional[str] = None,
-    instagram_link: Optional[str] = None,
-    x_link: Optional[str] = None,
+    user: User,
     speaker_type: Optional[SpeakerType] = None,
+    now: Optional[datetime] = None,
     is_commit: bool = True,
 ) -> Speaker:
-    speaker.name = name
-    speaker.bio = bio
-    if photo_url is not None:
-        speaker.photo_url = photo_url
-    speaker.email = email
-    speaker.instagram_link = instagram_link
-    speaker.x_link = x_link
+    if now is None:
+        now = datetime.now().astimezone(timezone("Asia/Jakarta"))
+    speaker.user = user
     speaker.speaker_type = speaker_type
+    speaker.updated_at = now
     if is_commit:
         db.commit()
     return speaker

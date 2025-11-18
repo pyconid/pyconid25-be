@@ -2,7 +2,6 @@ from typing import List, Optional
 from fastapi import Query
 from pydantic import BaseModel
 from uuid import UUID
-from datetime import datetime
 
 from schemas.speaker_type import DetailSpeakerResponse
 
@@ -14,16 +13,19 @@ class SpeakerQuery(BaseModel):
     all: Optional[bool] = Query(None, description="Return all speaker if true")
 
 
+class UserInSpeakerResponse(BaseModel):
+    id: UUID
+    username: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    email: Optional[str] = None
+
+    model_config = {"from_attributes": True}
+
+
 class SpeakerResponseItem(BaseModel):
     id: UUID
-    name: str
-    bio: Optional[str] = None
-    photo_url: Optional[str] = None
-    email: Optional[str] = None
-    instagram_link: Optional[str] = None
-    x_link: Optional[str] = None
-    created_at: Optional[datetime] = None
-    updated_at: Optional[datetime] = None
+    user: UserInSpeakerResponse
     speaker_type: Optional[DetailSpeakerResponse] = None
     # is_keynote_speaker: Optional[bool] = None
     model_config = {
@@ -41,12 +43,19 @@ class SpeakerResponse(BaseModel):
 
 class SpeakerDetailResponse(BaseModel):
     id: str
-    name: str
-    bio: Optional[str] = None
-    photo_url: Optional[str] = None
-    email: Optional[str] = None
-    instagram_link: Optional[str] = None
-    x_link: Optional[str] = None
+
+    class DetailUser(BaseModel):
+        id: str
+        first_name: Optional[str] = None
+        last_name: Optional[str] = None
+        username: Optional[str] = None
+        bio: Optional[str] = None
+        profile_picture: Optional[str] = None
+        email: str = None
+        instagram_username: Optional[str] = None
+        twitter_username: Optional[str] = None
+
+    user: DetailUser
     created_at: Optional[str] = None
     updated_at: Optional[str] = None
 
@@ -55,3 +64,29 @@ class SpeakerDetailResponse(BaseModel):
         name: str
 
     speaker_type: Optional[DetailSpeakerType] = None
+
+
+class CreateSpeakerRequest(BaseModel):
+    user_id: str
+    speaker_type_id: Optional[str] = None
+
+
+class CreateSpeakerResponse(BaseModel):
+    id: str
+    user_id: str
+    speaker_type_id: Optional[str] = None
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
+
+
+class UpdateSpeakerRequest(BaseModel):
+    user_id: str
+    speaker_type_id: Optional[str] = None
+
+
+class UpdateSpeakerResponse(BaseModel):
+    id: str
+    user_id: str
+    speaker_type_id: Optional[str] = None
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None

@@ -1,8 +1,8 @@
+import uuid
 import alembic.config
 from unittest import IsolatedAsyncioTestCase
 
 from fastapi.testclient import TestClient
-from pytz import timezone
 from sqlalchemy import select
 from core.security import generate_token_from_user
 from models import engine, db, get_db_sync, get_db_sync_for_test
@@ -27,28 +27,90 @@ class TestSpeaker(IsolatedAsyncioTestCase):
         # "create_savepoint" join_transaction_mode
         self.db = db(bind=self.connection, join_transaction_mode="create_savepoint")
 
-    async def test_get_speaker_by_id(self):
+    async def test_get_all_speaker(self):
         # Given
         user_management = User(
             id="123e4567-e89b-12d3-a456-426614174000",
             username="admin",
             participant_type=MANAGEMENT_PARTICIPANT,
         )
+        self.db.add(user_management)
+        st = SpeakerType(name="Keynote Speaker")
+        self.db.add(st)
+        user_1 = User(
+            username="John Doe",
+            first_name="John",
+            last_name="Doe",
+            bio="A keynote speaker",
+            profile_picture="http://example.com/photo.jpg",
+            email="john@pycon.id",
+            instagram_username="http://instagram.com/johndoe",
+            twitter_username="http://x.com/johndoe",
+        )
+        self.db.add(user_1)
+        speaker1 = Speaker(
+            user=user_1,
+            speaker_type=st,
+        )
+        self.db.add(speaker1)
+        self.db.commit()
+        user_2 = User(
+            username="Jane Doe",
+            first_name="Jane",
+            last_name="Doe",
+            bio="A keynote speaker",
+            profile_picture="http://example.com/photo.jpg",
+            email="jane@pycon.id",
+            instagram_username="http://instagram.com/johndoe",
+            twitter_username="http://x.com/johndoe",
+        )
+        self.db.add(user_1)
+        speaker2 = Speaker(
+            user=user_2,
+            speaker_type=st,
+        )
+        self.db.add(speaker2)
+        self.db.commit()
+        (token, _) = await generate_token_from_user(db=self.db, user=user_management)
+        app.dependency_overrides[get_db_sync] = get_db_sync_for_test(db=self.db)
+        client = TestClient(app)
+
+        # When
+        response = client.get(
+            "/speaker/",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+        # Expect
+        self.assertEqual(response.status_code, 200)
+
+    async def test_get_speaker_by_id(self):
+        # Given
+        user_management = User(
+            username="admin",
+            participant_type=MANAGEMENT_PARTICIPANT,
+        )
+        self.db.add(user_management)
         user_non_management = User(
-            id="019a8bcd-d8d9-7e2a-8ca4-3aedfd1270a1",
             username="admin",
             participant_type=None,
         )
+        self.db.add(user_non_management)
         st = SpeakerType(name="Keynote Speaker")
         self.db.add(st)
-        speaker = Speaker(
-            id="123e4567-e89b-12d3-a456-426614174000",
-            name="John Doe",
+        user = User(
+            username="John Doe",
+            first_name="John",
+            last_name="Doe",
             bio="A keynote speaker",
-            photo_url="http://example.com/photo.jpg",
+            profile_picture="http://example.com/photo.jpg",
             email="John@gmail.com",
-            instagram_link="http://instagram.com/johndoe",
-            x_link="http://x.com/johndoe",
+            instagram_username="http://instagram.com/johndoe",
+            twitter_username="http://x.com/johndoe",
+        )
+        self.db.add(user)
+        speaker = Speaker(
+            user=user,
             speaker_type=st,
         )
         self.db.add(speaker)
@@ -68,18 +130,17 @@ class TestSpeaker(IsolatedAsyncioTestCase):
             response.json(),
             SpeakerDetailResponse(
                 id=str(speaker.id),
-                name=speaker.name,
-                bio=speaker.bio,
-                photo_url=speaker.photo_url,
-                email=speaker.email,
-                instagram_link=speaker.instagram_link,
-                x_link=speaker.x_link,
-                created_at=speaker.created_at.astimezone(
-                    timezone("Asia/Jakarta")
-                ).strftime("%Y-%m-%d %H:%M:%S"),
-                updated_at=speaker.updated_at.astimezone(
-                    timezone("Asia/Jakarta")
-                ).strftime("%Y-%m-%d %H:%M:%S"),
+                user=SpeakerDetailResponse.DetailUser(
+                    id=str(speaker.user.id),
+                    first_name=speaker.user.first_name,
+                    last_name=speaker.user.last_name,
+                    username=speaker.user.username,
+                    bio=speaker.user.bio,
+                    profile_picture=speaker.user.profile_picture,
+                    email=speaker.user.email,
+                    instagram_username=speaker.user.instagram_username,
+                    twitter_username=speaker.user.twitter_username,
+                ),
                 speaker_type=SpeakerDetailResponse.DetailSpeakerType(
                     id=str(speaker.speaker_type.id),
                     name=speaker.speaker_type.name,
@@ -100,18 +161,18 @@ class TestSpeaker(IsolatedAsyncioTestCase):
         # Expect 2
         self.assertEqual(response.status_code, 403)
 
-    async def test_create_speaker_and_get_speaker_photo(self):
+    async def test_create_speaker(self):
         # Given
         user_management = User(
-            id="123e4567-e89b-12d3-a456-426614174000",
             username="admin",
             participant_type=MANAGEMENT_PARTICIPANT,
         )
+        self.db.add(user_management)
         user_non_management = User(
-            id="019a8bcd-d8d9-7e2a-8ca4-3aedfd1270a1",
-            username="admin",
+            username="admin non management",
             participant_type=None,
         )
+        self.db.add(user_non_management)
         st = SpeakerType(name="Keynote Speaker")
         self.db.add(st)
         self.db.commit()
@@ -123,29 +184,19 @@ class TestSpeaker(IsolatedAsyncioTestCase):
         response = client.post(
             "/speaker/",
             headers={"Authorization": f"Bearer {token}"},
-            data={
-                "name": "Jane Doe",
-                "bio": "An updated keynote speaker",
-                "email": "hello@gmail.com",
-                "instagram_link": "http://instagram.com/janedoe",
-                "x_link": "http://x.com/janedoe",
+            json={
+                "user_id": str(user_non_management.id),
                 "speaker_type_id": str(st.id),
             },
-            files={"photo": open("./routes/tests/data/bandungpy.jpg", "rb")},
+            # files={"photo": open("./routes/tests/data/bandungpy.jpg", "rb")},
         )
 
         # Expect 1
         self.assertEqual(response.status_code, 200)
-        stmt = select(Speaker).where(Speaker.name == "Jane Doe")
+        stmt = select(Speaker).where(Speaker.user_id == user_non_management.id)
         speaker = self.db.execute(stmt).scalar()
         self.assertIsNotNone(speaker)
-        self.assertEqual(speaker.name, "Jane Doe")
-        self.assertEqual(speaker.bio, "An updated keynote speaker")
-        self.assertIsNotNone(speaker.photo_url)
-        self.assertEqual(speaker.email, "hello@gmail.com")
-        self.assertEqual(speaker.instagram_link, "http://instagram.com/janedoe")
-        self.assertEqual(speaker.x_link, "http://x.com/janedoe")
-        self.assertEqual(speaker.speaker_type.id, st.id)
+        self.assertEqual(speaker.speaker_type_id, st.id)
 
         # When 2
         (token, _) = await generate_token_from_user(
@@ -154,48 +205,43 @@ class TestSpeaker(IsolatedAsyncioTestCase):
         response = client.post(
             "/speaker/",
             headers={"Authorization": f"Bearer {token}"},
-            data={
-                "name": "Jane Doe",
-                "bio": "An updated keynote speaker",
-                "email": "hello@gmail.com",
-                "instagram_link": "http://instagram.com/janedoe",
-                "x_link": "http://x.com/janedoe",
+            json={
+                "user_id": str(user_non_management.id),
                 "speaker_type_id": str(st.id),
             },
-            files={"photo": open("./routes/tests/data/bandungpy.jpg", "rb")},
+            # files={"photo": open("./routes/tests/data/bandungpy.jpg", "rb")},
         )
 
         # Expect 2
         self.assertEqual(response.status_code, 403)
 
-        # When 3
-        response = client.get(f"/speaker/photo/{speaker.photo_url}")
-
-        # Expect 3
-        self.assertEqual(response.status_code, 200)
-
     async def test_update_speaker(self):
         # Given
         user_management = User(
-            id="123e4567-e89b-12d3-a456-426614174000",
             username="admin",
             participant_type=MANAGEMENT_PARTICIPANT,
         )
+        self.db.add(user_management)
         user_non_management = User(
-            id="019a8bcd-d8d9-7e2a-8ca4-3aedfd1270a1",
             username="admin",
             participant_type=None,
         )
+        self.db.add(user_non_management)
         st = SpeakerType(name="Keynote Speaker")
         self.db.add(st)
-        speaker = Speaker(
-            id="123e4567-e89b-12d3-a456-426614174000",
-            name="John Doe",
+        user = User(
+            username="John Doe",
+            first_name="John",
+            last_name="Doe",
             bio="A keynote speaker",
-            photo_url="http://example.com/photo.jpg",
+            profile_picture="http://example.com/photo.jpg",
             email="John@gmail.com",
-            instagram_link="http://instagram.com/johndoe",
-            x_link="http://x.com/johndoe",
+            instagram_username="http://instagram.com/johndoe",
+            twitter_username="http://x.com/johndoe",
+        )
+        self.db.add(user)
+        speaker = Speaker(
+            user=user,
             speaker_type=st,
         )
         self.db.add(speaker)
@@ -208,26 +254,17 @@ class TestSpeaker(IsolatedAsyncioTestCase):
         response = client.put(
             f"/speaker/{speaker.id}",
             headers={"Authorization": f"Bearer {token}"},
-            data={
-                "name": "Jane Doe",
-                "bio": "An updated keynote speaker",
-                "email": "hello@gmail.com",
-                "instagram_link": "http://instagram.com/janedoe",
-                "x_link": "http://x.com/janedoe",
+            json={
+                "user_id": str(user_non_management.id),
                 "speaker_type_id": str(st.id),
             },
-            files={"photo": open("./routes/tests/data/bandungpy.jpg", "rb")},
+            # files={"photo": open("./routes/tests/data/bandungpy.jpg", "rb")},
         )
 
         # Expect 1
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(speaker.name, "Jane Doe")
-        self.assertEqual(speaker.bio, "An updated keynote speaker")
-        self.assertIsNotNone(speaker.photo_url)
-        self.assertEqual(speaker.email, "hello@gmail.com")
-        self.assertEqual(speaker.instagram_link, "http://instagram.com/janedoe")
-        self.assertEqual(speaker.x_link, "http://x.com/janedoe")
-        self.assertEqual(speaker.speaker_type.id, st.id)
+        self.assertEqual(speaker.speaker_type_id, st.id)
+        self.assertEqual(speaker.user_id, user_non_management.id)
 
         # When 2
         (token, _) = await generate_token_from_user(
@@ -236,15 +273,11 @@ class TestSpeaker(IsolatedAsyncioTestCase):
         response = client.put(
             f"/speaker/{speaker.id}",
             headers={"Authorization": f"Bearer {token}"},
-            data={
-                "name": "Jane Doe",
-                "bio": "An updated keynote speaker",
-                "email": "hello@gmail.com",
-                "instagram_link": "http://instagram.com/janedoe",
-                "x_link": "http://x.com/janedoe",
+            json={
+                "user_id": str(user_non_management.id),
                 "speaker_type_id": str(st.id),
             },
-            files={"photo": open("./routes/tests/data/bandungpy.jpg", "rb")},
+            # files={"photo": open("./routes/tests/data/bandungpy.jpg", "rb")},
         )
 
         # Expect 2
@@ -253,26 +286,30 @@ class TestSpeaker(IsolatedAsyncioTestCase):
     async def test_delete_speaker(self):
         # Given
         user_management = User(
-            id="123e4567-e89b-12d3-a456-426614174000",
             username="admin",
             participant_type=MANAGEMENT_PARTICIPANT,
         )
+        self.db.add(user_management)
         user_non_management = User(
-            id="019a8bcd-d8d9-7e2a-8ca4-3aedfd1270a1",
             username="admin",
             participant_type=None,
         )
+        self.db.add(user_non_management)
         st = SpeakerType(name="Keynote Speaker")
         self.db.add(st)
-        speaker_id = "123e4567-e89b-12d3-a456-426614174000"
-        speaker = Speaker(
-            id=speaker_id,
-            name="John Doe",
+        user = User(
+            username="John Doe",
+            first_name="John",
+            last_name="Doe",
             bio="A keynote speaker",
-            photo_url="http://example.com/photo.jpg",
+            profile_picture="http://example.com/photo.jpg",
             email="John@gmail.com",
-            instagram_link="http://instagram.com/johndoe",
-            x_link="http://x.com/johndoe",
+            instagram_username="http://instagram.com/johndoe",
+            twitter_username="http://x.com/johndoe",
+        )
+        speaker = Speaker(
+            id=uuid.uuid4(),
+            user=user,
             speaker_type=st,
         )
         self.db.add(speaker)
@@ -283,13 +320,13 @@ class TestSpeaker(IsolatedAsyncioTestCase):
 
         # When 1
         response = client.delete(
-            f"/speaker/{speaker_id}",
+            f"/speaker/{str(speaker.id)}",
             headers={"Authorization": f"Bearer {token}"},
         )
 
         # Expect 1
         self.assertEqual(response.status_code, 204)
-        stmt = select(Speaker).where(Speaker.id == speaker_id)
+        stmt = select(Speaker).where(Speaker.id == speaker.id)
         speaker = self.db.execute(stmt).scalar()
         self.assertIsNone(speaker)
 

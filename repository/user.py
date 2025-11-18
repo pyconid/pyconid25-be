@@ -23,6 +23,30 @@ def get_user_by_email(db: Session, email: str) -> Optional[User]:
     return data
 
 
+def get_all_user(
+    db: Session, search: Optional[str] = None, paritcipant_type: Optional[str] = None
+) -> list[User]:
+    stmt = select(User)
+    if search:
+        search_pattern = f"%{search}%"
+        stmt = stmt.where(
+            (User.username.ilike(search_pattern))
+            | (User.first_name.ilike(search_pattern))
+            | (User.last_name.ilike(search_pattern))
+            | (User.email.ilike(search_pattern))
+        )
+    if paritcipant_type:
+        stmt = stmt.where(User.participant_type == paritcipant_type)
+    stmt = stmt.order_by(User.email.asc())
+    results = db.execute(stmt).scalars().all()
+    return results
+
+
+def get_user_by_id(db: Session, id: str) -> Optional[User]:
+    stmt = select(User).where(User.id == id)
+    return db.execute(stmt).scalar()
+
+
 def create_user(
     db: Session,
     username: str = None,

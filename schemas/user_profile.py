@@ -14,6 +14,16 @@ from pydantic import (
 )
 
 
+class DetailSearchUserProfile(BaseModel):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    email: Optional[str] = None
+
+
+class SearchUserProfileResponse(BaseModel):
+    results: List[DetailSearchUserProfile]
+
+
 class IndustryCategory(str, Enum):
     CAPITAL_GOODS = "Capital Goods"
     COMMERCIAL = "Commercial & Professional Services"
