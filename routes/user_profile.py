@@ -1,17 +1,20 @@
-from datetime import date
+from datetime import date, datetime
 from typing import Optional
 from fastapi import Form, UploadFile, File
 from fastapi import APIRouter, Depends
 from pydantic import EmailStr, HttpUrl
-from core.helper import save_file_and_get_url
-from models.User import User
+from pytz import timezone
+from core.file import is_over_max_file_size, upload_file
+from models.User import MANAGEMENT_PARTICIPANT, User
 from schemas.user_profile import (
+    DetailSearchUserProfile,
     Gender,
     IndustryCategory,
     JobCategory,
     LookingForOption,
     ParticipantType,
     ParticipantTypeDropdownResponse,
+    SearchUserProfileResponse,
     TShirtSize,
     UserProfileCreate,
     UserProfileDB,
@@ -24,7 +27,9 @@ from schemas.user_profile import (
 from sqlalchemy.orm import Session
 from core.responses import (
     BadRequest,
+    Forbidden,
     InternalServerError,
+    Ok,
     common_response,
     Unauthorized,
 )
@@ -34,14 +39,59 @@ from core.security import (
 from models import get_db_sync
 from schemas.common import (
     BadRequestResponse,
+    ForbiddenResponse,
     InternalServerErrorResponse,
     UnauthorizedResponse,
     ValidationErrorResponse,
 )
 from repository import user as userRepo
+from settings import MAX_FILE_SIZE_MB
 from validators.location import LocationValidationError, validate_location_hierarchy
 
 router = APIRouter(prefix="/user-profile", tags=["UserProfile"])
+
+
+@router.get(
+    "/search/",
+    responses={
+        "200": {"model": SearchUserProfileResponse},
+        "401": {"model": UnauthorizedResponse},
+        "403": {"model": ForbiddenResponse},
+        "500": {"model": InternalServerErrorResponse},
+    },
+)
+async def search_user_profiles(
+    search: Optional[str] = None,
+    participant_type: Optional[ParticipantType] = None,
+    db: Session = Depends(get_db_sync),
+    user: User = Depends(get_current_user),
+):
+    if user is None:
+        return common_response(Unauthorized(message="Unauthorized"))
+
+    if user.participant_type != MANAGEMENT_PARTICIPANT:
+        return common_response(Forbidden())
+
+    all_user = userRepo.get_all_user(
+        db=db, search=search, paritcipant_type=participant_type
+    )
+    return common_response(
+        Ok(
+            data=SearchUserProfileResponse(
+                results=[
+                    DetailSearchUserProfile(
+                        id=str(user.id),
+                        username=user.username,
+                        first_name=user.first_name,
+                        last_name=user.last_name,
+                        email=user.email,
+                    )
+                    for user in all_user
+                ]
+            ).model_dump()
+        )
+    )
+
 
 # === PUT endpoint ===
 
@@ -150,7 +200,16 @@ async def update_user_profile(
     # 1. Simpan file dan dapatkan URL
     profile_picture_url = None
     if profile_picture:
-        profile_picture_url = save_file_and_get_url(profile_picture)
+        if is_over_max_file_size(upload_file=profile_picture):
+            return common_response(
+                BadRequest(
+                    error=f"File size exceeds the maximum limit ({MAX_FILE_SIZE_MB} mb)"
+                )
+            )
+        now = datetime.now().astimezone(timezone("Asia/Jakarta"))
+        profile_picture_url = f"{first_name}-{last_name}-profile-photo-{now.strftime('%Y%m%d%H%M%S')}-{profile_picture.filename}"
+        await upload_file(upload_file=profile_picture, path=profile_picture_url)
+        # profile_picture_url = save_file_and_get_url(profile_picture)
 
     # 2. Gabungkan data. user_form.model_dump() akan berisi
     user_profile_dict = user_profile_pydantic.model_dump()

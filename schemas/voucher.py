@@ -1,8 +1,12 @@
-from typing import List, Optional
+from typing import List, Optional, TypedDict
 from fastapi import Query
 from pydantic import BaseModel
 from uuid import UUID
 from schemas.user_profile import ParticipantType
+
+
+class EmailWhiteListDict(TypedDict):
+    emails: List[str]
 
 
 class VoucherQuery(BaseModel):
@@ -16,7 +20,16 @@ class VoucherCreateRequest(BaseModel):
     value: int = 0
     quota: int
     type: ParticipantType | None = None
-    email_whitelist: dict | None = None
+    email_whitelist: EmailWhiteListDict | None = None
+    is_active: bool = False
+
+
+class VoucherUpdateRequest(BaseModel):
+    code: str
+    value: int = 0
+    quota: int
+    type: ParticipantType | None = None
+    email_whitelist: EmailWhiteListDict | None = None
     is_active: bool = False
 
 
@@ -25,7 +38,7 @@ class VoucherUpdateStatusRequest(BaseModel):
 
 
 class VoucherUpdateWhitelistRequest(BaseModel):
-    email_whitelist: dict
+    email_whitelist: EmailWhiteListDict
 
 
 class VoucherUpdateQuotaRequest(BaseModel):
@@ -45,7 +58,7 @@ class VoucherResponse(BaseModel):
     code: str
     value: int
     type: str | None = None
-    email_whitelist: dict | None = None
+    email_whitelist: EmailWhiteListDict | None = None
     quota: int
     is_active: bool
 
@@ -55,7 +68,7 @@ class VoucherResponseItem(BaseModel):
     code: str
     value: int
     type: str | None = None
-    email_whitelist: dict | None = None
+    email_whitelist: EmailWhiteListDict | None = None
     quota: int
     is_active: bool
     model_config = {"from_attributes": True}
