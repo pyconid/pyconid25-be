@@ -280,6 +280,7 @@ async def create_payment(
                 customer_name=customer_name,
                 customer_phone=user.phone,
                 tx_internal_id=str(payment.id),
+                voucher=voucher,
             )
 
             data = mayar_response.get("data", {})
