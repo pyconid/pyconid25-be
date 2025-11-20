@@ -3,6 +3,8 @@ from models import Base
 from sqlalchemy import UUID, DateTime, String, Boolean, Integer, ForeignKey
 from sqlalchemy.orm import mapped_column, Mapped, relationship
 
+MANAGEMENT_PARTICIPANT = "Management"
+
 
 class User(Base):
     __tablename__ = "user"

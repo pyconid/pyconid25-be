@@ -9,6 +9,28 @@ def hello(name: str):
 
 
 @app.command()
+def create_management_user():
+    from models import factory_session
+    from repository.user import create_user
+    from core.security import generate_hash_password
+    from models.User import MANAGEMENT_PARTICIPANT
+
+    email = typer.prompt("email")
+    password = typer.prompt("password", hide_input=True)
+
+    with factory_session() as db:
+        create_user(
+            db=db,
+            email=email,
+            username=email,
+            password=generate_hash_password(password),
+            participant_type=MANAGEMENT_PARTICIPANT,
+            is_active=True,
+            is_commit=True,
+        )
+
+
+@app.command()
 def initial_data():
     from seeders.initial_seeders import initial_seeders
 
