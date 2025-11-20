@@ -88,8 +88,11 @@ class MayarService:
                     timeout=30.0,
                 )
                 response.raise_for_status()
+                print(response.status_code)
                 result = response.json()
-
+                print(
+                    f"Mayar create payment response: status:{response.status_code} {result}"
+                )
                 logger.info(f"Payment created successfully: {result}")
                 return result
         except httpx.HTTPStatusError as e:
