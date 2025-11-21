@@ -9,6 +9,7 @@ services:
       - ./.env
     volumes:
       - ./.env:/app/.env
+      - ./storage/:/app/storage/
     networks:
       - ${NETWORK_NAME}
     healthcheck:

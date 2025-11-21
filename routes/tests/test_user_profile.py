@@ -3,15 +3,17 @@ import alembic.config
 from unittest import IsolatedAsyncioTestCase
 
 from fastapi.testclient import TestClient
-from core.security import generate_hash_password
+from core.security import generate_hash_password, generate_token_from_user
 from models import engine, db, get_db_sync, get_db_sync_for_test
 from models.City import City
 from models.Country import Country
 from models.State import State
-from models.User import User
+from models.User import MANAGEMENT_PARTICIPANT, User
 from main import app
 from schemas.user_profile import (
+    DetailSearchUserProfile,
     JobCategory,
+    SearchUserProfileResponse,
     UserProfileCreate,
     UserProfileDB,
 )
@@ -30,6 +32,123 @@ class TestUserProfile(IsolatedAsyncioTestCase):
         # bind an individual Session to the connection, selecting
         # "create_savepoint" join_transaction_mode
         self.db = db(bind=self.connection, join_transaction_mode="create_savepoint")
+
+    async def test_search_user_profiles(self):
+        # Given
+        user_management = User(
+            id="123e4567-e89b-12d3-a456-426614174000",
+            username="admin",
+            participant_type=MANAGEMENT_PARTICIPANT,
+            email="admin@local.com",
+        )
+        self.db.add(user_management)
+        new_user1 = User(
+            id="223e4567-e89b-12d3-a456-426614174000",
+            first_name="Test",
+            last_name="User1",
+            username="testuser1",
+            email="testuser1@local.com",
+        )
+        self.db.add(new_user1)
+        new_user2 = User(
+            id="61df5dec-7c9d-4c93-9fc6-f5d82c420b58",
+            first_name="Test",
+            last_name="User2",
+            username="testuser2",
+            email="testuser2@local.com",
+        )
+        self.db.add(new_user2)
+        new_user3 = User(
+            id="2996c5c0-a01d-4eab-a28d-a4ea9875780b",
+            first_name="Test",
+            last_name="User3",
+            username="testuser3",
+            email="testuser3@local.com",
+            participant_type="Speaker",
+        )
+        self.db.add(new_user3)
+        self.db.commit()
+        all_user = sorted(
+            [user_management, new_user1, new_user2, new_user3], key=lambda u: u.email
+        )
+        (token, _) = await generate_token_from_user(db=self.db, user=user_management)
+        app.dependency_overrides[get_db_sync] = get_db_sync_for_test(db=self.db)
+        client = TestClient(app)
+
+        # When 1
+        response = client.get(
+            "/user-profile/search/", headers={"Authorization": f"Bearer {token}"}
+        )
+
+        # Expect 1
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(
+            response.json(),
+            SearchUserProfileResponse(
+                results=[
+                    DetailSearchUserProfile(
+                        id=str(user.id),
+                        username=user.username,
+                        first_name=user.first_name,
+                        last_name=user.last_name,
+                        email=user.email,
+                    )
+                    for user in all_user
+                ]
+            ).model_dump(),
+        )
+
+        # When 2
+        response = client.get(
+            "/user-profile/search/",
+            headers={"Authorization": f"Bearer {token}"},
+            params={"search": "user"},
+        )
+
+        # Expect 2
+        all_user = sorted([new_user1, new_user2, new_user3], key=lambda u: u.email)
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(
+            response.json(),
+            SearchUserProfileResponse(
+                results=[
+                    DetailSearchUserProfile(
+                        id=str(user.id),
+                        username=user.username,
+                        first_name=user.first_name,
+                        last_name=user.last_name,
+                        email=user.email,
+                    )
+                    for user in all_user
+                ]
+            ).model_dump(),
+        )
+
+        # When 3
+        response = client.get(
+            "/user-profile/search/",
+            headers={"Authorization": f"Bearer {token}"},
+            params={"search": "user", "participant_type": "Speaker"},
+        )
+
+        # Expect 3
+        all_user = sorted([new_user3], key=lambda u: u.email)
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(
+            response.json(),
+            SearchUserProfileResponse(
+                results=[
+                    DetailSearchUserProfile(
+                        id=str(user.id),
+                        username=user.username,
+                        first_name=user.first_name,
+                        last_name=user.last_name,
+                        email=user.email,
+                    )
+                    for user in all_user
+                ]
+            ).model_dump(),
+        )
 
     async def test_update_user_profile(self):
         # Given
@@ -124,6 +243,7 @@ class TestUserProfile(IsolatedAsyncioTestCase):
             username="testuser",
             email="testuser@local.com",
             password=generate_hash_password("password"),
+            # participant_type=MANAGEMENT_PARTICIPANT,
             is_active=True,
         )
         self.db.add(new_user)

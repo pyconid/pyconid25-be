@@ -50,13 +50,26 @@ def get_payment_by_id(db: Session, payment_id: str) -> Optional[Payment]:
     return payment
 
 
-def get_payments_by_user_id(db: Session, user_id: str) -> List[Payment]:
+def get_payments_by_user_id(
+    db: Session,
+    user_id: str,
+    status: Optional[PaymentStatus] = None,
+    exclude_payment_id: Optional[str] = None,
+) -> List[Payment]:
     stmt = (
         select(Payment)
         .options(joinedload(Payment.ticket))
         .where(Payment.user_id == user_id)
         .order_by(Payment.created_at.desc())
     )
+    if exclude_payment_id:
+        stmt = stmt.where(Payment.id != exclude_payment_id)
+    if status is not None:
+        stmt = stmt.where(
+            Payment.status == status.value
+            if isinstance(status, PaymentStatus)
+            else status
+        )
     payments = db.execute(stmt).scalars().all()
     return list(payments)
 
@@ -70,12 +83,14 @@ def update_payment(
     mayar_transaction_id: Optional[str] = None,
     is_commit: bool = True,
 ) -> Payment:
+    now = datetime.now(timezone(TZ))
     if status is not None:
         payment.status = status.value if isinstance(status, PaymentStatus) else status
         if status == PaymentStatus.PAID and payment.paid_at is None:
-            payment.paid_at = datetime.now(timezone(TZ))
+            payment.paid_at = now
         elif status == PaymentStatus.CLOSED and payment.closed_at is None:
-            payment.closed_at = datetime.now(timezone(TZ))
+            payment.closed_at = now
+
     if mayar_id is not None:
         payment.mayar_id = mayar_id
     if mayar_transaction_id is not None:
@@ -102,3 +117,48 @@ def get_payment_by_mayar_transaction_id(
     stmt = select(Payment).where(Payment.mayar_transaction_id == mayar_transaction_id)
     payment = db.execute(stmt).scalar()
     return payment
+
+
+def get_user_paid_payment(
+    db: Session,
+    user_id: str,
+) -> Optional[Payment]:
+    stmt = (
+        select(Payment)
+        .options(joinedload(Payment.ticket), joinedload(Payment.voucher))
+        .where(
+            Payment.user_id == user_id,
+            Payment.status == PaymentStatus.PAID.value,
+        )
+    )
+    payment = db.execute(stmt).scalar()
+    return payment
+
+
+def close_other_unpaid_payments(
+    db: Session,
+    user_id: str,
+    exclude_payment_id: Optional[str] = None,
+    is_commit: bool = True,
+) -> int:
+    stmt = select(Payment).where(
+        Payment.user_id == user_id,
+        Payment.status == PaymentStatus.UNPAID.value,
+    )
+
+    if exclude_payment_id:
+        stmt = stmt.where(Payment.id != exclude_payment_id)
+
+    payments_to_close = db.execute(stmt).scalars().all()
+
+    now = datetime.now(timezone(TZ))
+    count = 0
+    for payment in payments_to_close:
+        payment.status = PaymentStatus.CLOSED.value
+        payment.closed_at = now
+        count += 1
+
+    if is_commit and count > 0:
+        db.commit()
+
+    return count

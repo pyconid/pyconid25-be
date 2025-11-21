@@ -24,6 +24,7 @@ class LoginSuccessResponse(BaseModel):
 class MeResponse(BaseModel):
     id: str
     username: str
+    participant_type: Optional[str] = None
 
 
 class LogoutSuccessResponse(BaseModel):

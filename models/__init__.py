@@ -67,3 +67,4 @@ from models.Speaker import Speaker  # NOQA
 from models.Voucher import Voucher  # NOQA
 from models.StreamAsset import StreamAsset  # NOQA
 from models.StreamView import StreamView  # NOQA
+from models.SpeakerType import SpeakerType  # NOQA

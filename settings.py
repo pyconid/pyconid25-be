@@ -83,4 +83,7 @@ MUX_SIGNING_KEY_PRIVATE = os.environ.get("MUX_SIGNING_KEY_PRIVATE", "")
 STREAM_TOKEN_EXPIRE_MINUTES = int(
     os.environ.get("STREAM_TOKEN_EXPIRE_MINUTES", default="15")
 )
-MAX_UPLOAD_SIZE_MB = int(os.environ.get("MAX_UPLOAD_SIZE_MB", default="5000"))
+
+# File upload
+FILE_STORAGE_PATH = os.environ.get("FILE_STORAGE_PATH", "./storage")
+MAX_FILE_SIZE_MB = int(os.environ.get("MAX_FILE_SIZE_MB", "5"))
