@@ -170,7 +170,12 @@ def validate_and_use_voucher(
 
     if voucher.email_whitelist:
         whitelist = voucher.email_whitelist.get("emails", [])
-        if whitelist and user_email not in whitelist:
+
+        whitelist_normalized = {
+            e.strip().lower() for e in whitelist if isinstance(e, str)
+        }
+        user_email_normalized = user_email.strip().lower()
+        if whitelist_normalized and user_email_normalized not in whitelist_normalized:
             return None, "You are not authorized to use this voucher."
 
     voucher.quota -= 1

@@ -122,7 +122,15 @@ async def validate_voucher(
 
         if voucher.email_whitelist:
             whitelist = voucher.email_whitelist.get("emails", [])
-            if whitelist and user.email not in whitelist:
+
+            whitelist_normalized = {
+                e.strip().lower() for e in whitelist if isinstance(e, str)
+            }
+            user_email_normalized = user.email.strip().lower()
+            if (
+                whitelist_normalized
+                and user_email_normalized not in whitelist_normalized
+            ):
                 return common_response(
                     BadRequest(message="You are not authorized to use this voucher.")
                 )
