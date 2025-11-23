@@ -751,6 +751,50 @@ class TestPayment(IsolatedAsyncioTestCase):
             self.assertEqual(data["voucher"]["code"], "WHITELISTVOUCHER")
             self.assertEqual(data["voucher"]["value"], 100000)
 
+    async def test_create_payment_with_voucher_email_whitelist_case_insensitive(self):
+        whitelist_voucher = Voucher(
+            code="WHITELISTVOUCHER",
+            value=100000,
+            quota=5,
+            is_active=True,
+            email_whitelist={"emails": ["Payment@example.com ", "other@example.com"]},
+        )
+        self.db.add(whitelist_voucher)
+        self.db.commit()
+
+        mock_mayar_response = {
+            "statusCode": 200,
+            "messages": "success",
+            "data": {
+                "id": "mayar-id-whitelist",
+                "transactionId": "mayar-tx-whitelist",
+                "link": "https://mayar.id/pay/test-link-whitelist",
+            },
+        }
+
+        with patch("routes.payment.MayarService") as MockMayarService:
+            mock_service = MagicMock()
+            mock_service.create_payment = AsyncMock(return_value=mock_mayar_response)
+            MockMayarService.return_value = mock_service
+
+            response = self.client.post(
+                "/payment/",
+                json={
+                    "ticket_id": str(self.test_ticket.id),
+                    "voucher_code": "WHITELISTVOUCHER",
+                },
+                headers={"Authorization": f"Bearer {self.test_token}"},
+            )
+
+            self.assertEqual(response.status_code, 200)
+            data = response.json()
+            self.assertEqual(data["amount"], 400000)  # 500000 - 100000
+
+            # Check that voucher is in response
+            self.assertIsNotNone(data["voucher"])
+            self.assertEqual(data["voucher"]["code"], "WHITELISTVOUCHER")
+            self.assertEqual(data["voucher"]["value"], 100000)
+
     async def test_create_payment_with_voucher_email_whitelist_unauthorized(self):
         whitelist_voucher = Voucher(
             code="RESTRICTEDVOUCHER",
