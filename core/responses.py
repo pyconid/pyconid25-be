@@ -195,7 +195,7 @@ def common_response(res: HttpResponseAbstract):
     return res.response()
 
 
-def handle_http_exception(e: HTTPException) -> JSONResponse:
+def handle_http_exception(e: HTTPException) -> Optional[Union[JSONResponse, Response]]:
     if e.status_code == 400:
         return common_response(BadRequest(message=e.detail))
     elif e.status_code == 401:
@@ -207,8 +207,8 @@ def handle_http_exception(e: HTTPException) -> JSONResponse:
     elif e.status_code == 422:
         return common_response(BadRequest(message=e.detail))
     elif e.status_code >= 500:
-        return common_response(InternalServerError(error=e.detail))
+        return common_response(InternalServerError(custom_response=e.detail))
     else:
         return common_response(
-            InternalServerError(error=f"Unexpected error: {e.detail}")
+            InternalServerError(custom_response=f"Unexpected error: {e.detail}")
         )

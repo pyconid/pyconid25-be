@@ -79,6 +79,7 @@ MUX_TOKEN_ID = os.environ.get("MUX_TOKEN_ID", "")
 MUX_TOKEN_SECRET = os.environ.get("MUX_TOKEN_SECRET", "")
 MUX_WEBHOOK_SECRET = os.environ.get("MUX_WEBHOOK_SECRET", "")
 MUX_SIGNING_KEY_ID = os.environ.get("MUX_SIGNING_KEY_ID", "")
+# Base64-encoded private key from Mux Signing Keys
 MUX_SIGNING_KEY_PRIVATE = os.environ.get("MUX_SIGNING_KEY_PRIVATE", "")
 STREAM_TOKEN_EXPIRE_MINUTES = int(
     os.environ.get("STREAM_TOKEN_EXPIRE_MINUTES", default="15")

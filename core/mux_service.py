@@ -1,3 +1,5 @@
+from schemas.streaming import MuxStreamDetail
+import base64
 import hashlib
 import hmac
 import time
@@ -30,10 +32,7 @@ class MuxService:
         self.live_streams_api = mux_python.LiveStreamsApi(
             mux_python.ApiClient(configuration)
         )
-        self.assets_api = mux_python.AssetsApi(mux_python.ApiClient(configuration))
-        self.playback_ids_api = mux_python.PlaybackIDApi(
-            mux_python.ApiClient(configuration)
-        )
+        self.stream_url = "rtmps://global-live.mux.com:443/app/"
 
     def create_live_stream(
         self, is_public: bool = True
@@ -74,8 +73,6 @@ class MuxService:
             stream_id = live_stream.data.id
             stream_key = live_stream.data.stream_key
 
-            # Stream URL (RTMPS)
-            stream_url = "rtmps://global-live.mux.com:443/app/"
 
             # Get playback ID
             playback_id = None
@@ -84,13 +81,13 @@ class MuxService:
 
             logger.info(f"Created Mux live stream: {stream_id}")
 
-            return stream_id, stream_key, stream_url, playback_id
+            return stream_id, stream_key, self.stream_url, playback_id
 
         except ApiException as e:
             logger.error(f"Failed to create Mux live stream: {e}")
             raise
 
-    def get_live_stream(self, stream_id: str) -> dict:
+    def get_live_stream(self, stream_id: str) -> MuxStreamDetail:
         """
         Get live stream details from Mux
 
@@ -105,16 +102,16 @@ class MuxService:
         """
         try:
             live_stream = self.live_streams_api.get_live_stream(stream_id)
-            return {
-                "id": live_stream.data.id,
-                "status": live_stream.data.status,
-                "stream_key": live_stream.data.stream_key,
-                "playback_ids": [
+            return MuxStreamDetail(
+                id=live_stream.data.id,
+                status=live_stream.data.status,
+                stream_key=live_stream.data.stream_key,
+                playback_ids=[
                     {"id": pid.id, "policy": pid.policy}
                     for pid in live_stream.data.playback_ids or []
                 ],
-                "created_at": live_stream.data.created_at,
-            }
+                stream_url=self.stream_url,
+            )
         except ApiException as e:
             logger.error(f"Failed to get live stream {stream_id}: {e}")
             raise
@@ -136,131 +133,12 @@ class MuxService:
             logger.error(f"Failed to delete live stream {stream_id}: {e}")
             raise
 
-    def create_asset_from_url(self, video_url: str, is_public: bool = True) -> str:
-        """
-        Create a video asset from URL (e.g., uploaded to S3)
-
-        Args:
-            video_url: URL of the video file
-            is_public: Whether the asset is public or private
-
-        Returns:
-            Mux asset ID
-
-        Raises:
-            ApiException: If Mux API call fails
-        """
-        try:
-            playback_policy = (
-                [mux_python.PlaybackPolicy.PUBLIC]
-                if is_public
-                else [mux_python.PlaybackPolicy.SIGNED]
-            )
-
-            create_asset_request = mux_python.CreateAssetRequest(
-                input=[mux_python.InputSettings(url=video_url)],
-                playback_policy=playback_policy,
-            )
-
-            asset = self.assets_api.create_asset(create_asset_request)
-
-            logger.info(f"Created Mux asset: {asset.data.id}")
-
-            return asset.data.id
-
-        except ApiException as e:
-            logger.error(f"Failed to create Mux asset from URL: {e}")
-            raise
-
-    def create_direct_upload(self, is_public: bool = True) -> Tuple[str, str]:
-        """
-        Create a direct upload URL for uploading videos directly to Mux
-
-        Args:
-            is_public: Whether the asset is public or private
-
-        Returns:
-            Tuple of (upload_id, upload_url)
-
-        Raises:
-            ApiException: If Mux API call fails
-        """
-        try:
-            playback_policy = (
-                [mux_python.PlaybackPolicy.PUBLIC]
-                if is_public
-                else [mux_python.PlaybackPolicy.SIGNED]
-            )
-
-            create_upload_request = mux_python.CreateUploadRequest(
-                cors_origin="*",  # Adjust based on your needs
-                new_asset_settings=mux_python.CreateAssetRequest(
-                    playback_policy=playback_policy
-                ),
-            )
-
-            upload = self.assets_api.create_direct_upload(create_upload_request)
-
-            logger.info(f"Created Mux direct upload: {upload.data.id}")
-
-            return upload.data.id, upload.data.url
-
-        except ApiException as e:
-            logger.error(f"Failed to create Mux direct upload: {e}")
-            raise
-
-    def get_asset(self, asset_id: str) -> dict:
-        """
-        Get asset details from Mux
-
-        Args:
-            asset_id: Mux asset ID
-
-        Returns:
-            Asset details as dict
-
-        Raises:
-            ApiException: If Mux API call fails
-        """
-        try:
-            asset = self.assets_api.get_asset(asset_id)
-            return {
-                "id": asset.data.id,
-                "status": asset.data.status,
-                "duration": asset.data.duration,
-                "playback_ids": [
-                    {"id": pid.id, "policy": pid.policy}
-                    for pid in asset.data.playback_ids or []
-                ],
-                "created_at": asset.data.created_at,
-            }
-        except ApiException as e:
-            logger.error(f"Failed to get asset {asset_id}: {e}")
-            raise
-
-    def delete_asset(self, asset_id: str) -> None:
-        """
-        Delete an asset from Mux
-
-        Args:
-            asset_id: Mux asset ID
-
-        Raises:
-            ApiException: If Mux API call fails
-        """
-        try:
-            self.assets_api.delete_asset(asset_id)
-            logger.info(f"Deleted Mux asset: {asset_id}")
-        except ApiException as e:
-            logger.error(f"Failed to delete asset {asset_id}: {e}")
-            raise
-
     def generate_signed_playback_url(
         self,
         playback_id: str,
         user_id: Optional[str] = None,
         expire_minutes: Optional[int] = None,
-    ) -> Tuple[str, datetime]:
+    ) -> Tuple[str, str, datetime]:
         """
         Generate a signed playback URL for private streams
 
@@ -270,7 +148,7 @@ class MuxService:
             expire_minutes: Token expiry in minutes (defaults to STREAM_TOKEN_EXPIRE_MINUTES)
 
         Returns:
-            Tuple of (signed_url, expiration_time)
+            Tuple of (token, signed_url, expiration_time)
 
         Raises:
             ValueError: If signing key configuration is missing
@@ -282,7 +160,7 @@ class MuxService:
         if expire_minutes is None:
             expire_minutes = settings.STREAM_TOKEN_EXPIRE_MINUTES
 
-        expiration = datetime.utcnow() + timedelta(minutes=expire_minutes)
+        expiration = datetime.now() + timedelta(minutes=expire_minutes)
         exp_timestamp = int(expiration.timestamp())
 
         # Build JWT payload
@@ -297,8 +175,16 @@ class MuxService:
         if user_id:
             payload["uid"] = str(user_id)
 
+        # Decode base64 private key from Mux
+        # Mux signing keys are base64-encoded RSA private keys
+        try:
+            private_key = base64.b64decode(settings.MUX_SIGNING_KEY_PRIVATE)
+        except Exception:
+            # If already in PEM format, use as-is
+            private_key = settings.MUX_SIGNING_KEY_PRIVATE
+
         # Sign the JWT
-        token = jwt.encode(payload, settings.MUX_SIGNING_KEY_PRIVATE, algorithm="RS256")
+        token = jwt.encode(payload, private_key, algorithm="RS256")
 
         # Build the signed URL
         signed_url = f"https://stream.mux.com/{playback_id}.m3u8?token={token}"
@@ -307,7 +193,7 @@ class MuxService:
             f"Generated signed URL for playback {playback_id}, expires at {expiration}"
         )
 
-        return signed_url, expiration
+        return token, signed_url, expiration
 
     def generate_signed_thumbnail_url(
         self,
@@ -316,7 +202,7 @@ class MuxService:
         width: int = 1920,
         height: int = 1080,
         fit_mode: str = "smartcrop",
-    ) -> Tuple[str, datetime]:
+    ) -> Tuple[str, str, datetime]:
         """
         Generate a signed thumbnail URL for private streams
 
@@ -328,7 +214,7 @@ class MuxService:
             fit_mode: Fit mode (smartcrop, preserve, crop, pad)
 
         Returns:
-            Tuple of (signed_url, expiration_time)
+            Tuple of (token, signed_url, expiration_time)
 
         Raises:
             ValueError: If signing key configuration is missing
@@ -340,21 +226,28 @@ class MuxService:
         if expire_minutes is None:
             expire_minutes = settings.STREAM_TOKEN_EXPIRE_MINUTES
 
-        expiration = datetime.utcnow() + timedelta(minutes=expire_minutes)
+        expiration = datetime.now() + timedelta(minutes=expire_minutes)
         exp_timestamp = int(expiration.timestamp())
 
         payload = {
             "sub": playback_id,
             "aud": "t",  # 't' for thumbnail
             "exp": exp_timestamp,
-            "kid": settings.MUX_SIGNING_KEY_ID,
+            "kid": settings.MUX_SIGNING_KEY_ID
         }
 
-        token = jwt.encode(payload, settings.MUX_SIGNING_KEY_PRIVATE, algorithm="RS256")
+        # Decode base64 private key from Mux
+        try:
+            private_key = base64.b64decode(settings.MUX_SIGNING_KEY_PRIVATE)
+        except Exception:
+            # If already in PEM format, use as-is
+            private_key = settings.MUX_SIGNING_KEY_PRIVATE
+
+        token = jwt.encode(payload, private_key, algorithm="RS256")
 
         signed_url = f"https://image.mux.com/{playback_id}/thumbnail.jpg?token={token}&width={width}&height={height}&fit_mode={fit_mode}"
 
-        return signed_url, expiration
+        return token, signed_url, expiration
 
     def get_public_playback_url(self, playback_id: str) -> str:
         """
@@ -388,10 +281,6 @@ class MuxService:
             Public thumbnail URL
         """
         return f"https://image.mux.com/{playback_id}/thumbnail.jpg?width={width}&height={height}&fit_mode={fit_mode}"
-
-    # ========================================================================
-    # Webhook Verification
-    # ========================================================================
 
     def verify_webhook_signature(
         self, payload: bytes, signature: str, timestamp: str

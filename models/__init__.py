@@ -62,9 +62,10 @@ from models.Ticket import Ticket  # NOQA
 from models.EmailVerification import EmailVerification  # NOQA
 from models.ResetPassword import ResetPassword  # NOQA
 from models.Payment import Payment  # NOQA
+from models.Room import Room  # NOQA
+from models.ScheduleType import ScheduleType  # NOQA
 from models.Schedule import Schedule  # NOQA
 from models.Speaker import Speaker  # NOQA
 from models.Voucher import Voucher  # NOQA
-from models.StreamAsset import StreamAsset  # NOQA
-from models.StreamView import StreamView  # NOQA
+from models.Stream import Stream  # NOQA
 from models.SpeakerType import SpeakerType  # NOQA
