@@ -34,16 +34,12 @@ def create_stream(
     return stream
 
 
-def get_stream_by_id(
-    db: Session, stream_id: Union[UUID, str]
-) -> Optional[Stream]:
+def get_stream_by_id(db: Session, stream_id: Union[UUID, str]) -> Optional[Stream]:
     stmt = select(Stream).where(Stream.id == stream_id)
     return db.execute(stmt).scalar_one_or_none()
 
 
-def get_stream_by_mux_id(
-    db: Session, mux_id: str
-) -> Optional[Stream]:
+def get_stream_by_mux_id(db: Session, mux_id: str) -> Optional[Stream]:
     stmt = select(Stream).where(Stream.mux_live_stream_id == mux_id)
     return db.execute(stmt).scalar_one_or_none()
 

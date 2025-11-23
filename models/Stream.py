@@ -52,12 +52,8 @@ class Stream(Base):
     stream_ended_at: Mapped[datetime] = mapped_column(
         "stream_ended_at", DateTime(timezone=True), nullable=True
     )
-    created_at: Mapped[datetime] = mapped_column(
-        "created_at", DateTime(timezone=True)
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        "updated_at", DateTime(timezone=True)
-    )
+    created_at: Mapped[datetime] = mapped_column("created_at", DateTime(timezone=True))
+    updated_at: Mapped[datetime] = mapped_column("updated_at", DateTime(timezone=True))
 
     # Relationship
     schedule = relationship(

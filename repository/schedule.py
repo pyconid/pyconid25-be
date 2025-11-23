@@ -22,12 +22,15 @@ def get_all_schedules(
 
     # Jika ada keyword pencarian
     if search:
-        stmt = stmt.where(
-            Schedule.title.ilike(f"%{search}%")
-        )
+        stmt = stmt.where(Schedule.title.ilike(f"%{search}%"))
 
     if schedule_date:
-        stmt = stmt.where(or_(func.date(Schedule.start) == schedule_date, func.date(Schedule.end) == schedule_date))
+        stmt = stmt.where(
+            or_(
+                func.date(Schedule.start) == schedule_date,
+                func.date(Schedule.end) == schedule_date,
+            )
+        )
 
     # Hitung total data sebelum pagination
     total_count = db.scalar(select(func.count()).select_from(stmt.subquery()))
@@ -68,12 +71,15 @@ def get_schedule_per_page_by_search(
 
     # Jika ada keyword pencarian
     if search:
-        stmt = stmt.where(
-            Schedule.title.ilike(f"%{search}%")
-        )
+        stmt = stmt.where(Schedule.title.ilike(f"%{search}%"))
 
     if schedule_date:
-        stmt = stmt.where(or_(func.date(Schedule.start) == schedule_date, func.date(Schedule.end) == schedule_date))
+        stmt = stmt.where(
+            or_(
+                func.date(Schedule.start) == schedule_date,
+                func.date(Schedule.end) == schedule_date,
+            )
+        )
 
     # Hitung total data sebelum pagination
     total_count = db.scalar(select(func.count()).select_from(stmt.subquery()))

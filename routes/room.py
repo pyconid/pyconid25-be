@@ -29,7 +29,9 @@ async def get_room_dropdown(
             RoomDropdownItem(id=str(room.id), name=room.name) for room in rooms
         ]
 
-        return common_response(Ok(data=RoomDropdownResponse(results=room_items).model_dump()))
+        return common_response(
+            Ok(data=RoomDropdownResponse(results=room_items).model_dump())
+        )
     except Exception as e:
         logger.error(e)
         return common_response(InternalServerError(error=str(e)))

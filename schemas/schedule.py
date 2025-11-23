@@ -69,26 +69,22 @@ class RoomInfo(BaseModel):
     id: UUID
     name: str
 
-    model_config = {
-        "from_attributes": True
-    }
+    model_config = {"from_attributes": True}
 
 
 class ScheduleTypeInfo(BaseModel):
     id: UUID
     name: str
 
-    model_config = {
-        "from_attributes": True
-    }
+    model_config = {"from_attributes": True}
+
 
 class StreamInfo(BaseModel):
     id: UUID
     status: StreamStatus
 
-    model_config = {
-        "from_attributes": True
-    }
+    model_config = {"from_attributes": True}
+
 
 class ScheduleDetail(BaseModel):
     id: UUID
@@ -108,9 +104,7 @@ class ScheduleDetail(BaseModel):
     updated_at: datetime
     stream: Optional[StreamInfo] = None
 
-    model_config = {
-        "from_attributes": True
-    }
+    model_config = {"from_attributes": True}
 
 
 class ScheduleResponseItem(BaseModel):
@@ -125,9 +119,7 @@ class ScheduleResponseItem(BaseModel):
     updated_at: datetime
     stream: Optional[StreamInfo] = None
 
-    model_config = {
-        "from_attributes": True
-    }
+    model_config = {"from_attributes": True}
 
 
 class ScheduleResponse(BaseModel):

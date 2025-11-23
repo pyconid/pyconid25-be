@@ -38,7 +38,7 @@ from repository import (
     streaming as streamingRepo,
     room as roomRepo,
     speaker as speakerRepo,
-    schedule_type as scheduleTypeRepo
+    schedule_type as scheduleTypeRepo,
 )
 
 router = APIRouter(prefix="/schedule", tags=["Schedule"])
@@ -71,7 +71,9 @@ async def create_schedule(
         if room is None:
             return common_response(BadRequest(message="Room not found"))
 
-        schedule_type = scheduleTypeRepo.get_schedule_type_by_id(db=db, schedule_type_id=request.schedule_type_id)
+        schedule_type = scheduleTypeRepo.get_schedule_type_by_id(
+            db=db, schedule_type_id=request.schedule_type_id
+        )
         if schedule_type is None:
             return common_response(BadRequest(message="Schedule type not found"))
 
@@ -115,13 +117,17 @@ async def create_schedule(
                 status=StreamStatus.PENDING,
             )
         except Exception as stream_error:
-            logger.error(f"Failed to create stream for schedule {schedule.id}: {stream_error}")
+            logger.error(
+                f"Failed to create stream for schedule {schedule.id}: {stream_error}"
+            )
 
         # Refresh to get all relationships
         db.refresh(schedule)
 
         return common_response(
-            Created(data=ScheduleDetail.model_validate(schedule).model_dump(mode='json'))
+            Created(
+                data=ScheduleDetail.model_validate(schedule).model_dump(mode="json")
+            )
         )
 
     except Exception as e:
@@ -146,7 +152,9 @@ async def get_schedule_by_id(
         if not schedule:
             return common_response(NotFound(message="Schedule not found"))
 
-        return common_response(Ok(data=ScheduleDetail.model_validate(schedule).model_dump(mode='json')))
+        return common_response(
+            Ok(data=ScheduleDetail.model_validate(schedule).model_dump(mode="json"))
+        )
     except Exception as e:
         logger.error(f"Failed to get schedule by id {schedule_id}: {e}")
         return common_response(InternalServerError(error=str(e)))
@@ -185,7 +193,9 @@ async def update_schedule(
                 return common_response(BadRequest(message="Room not found"))
 
         if request.schedule_type_id is not None:
-            schedule_type = scheduleTypeRepo.get_schedule_type_by_id(db=db, schedule_type_id=request.schedule_type_id)
+            schedule_type = scheduleTypeRepo.get_schedule_type_by_id(
+                db=db, schedule_type_id=request.schedule_type_id
+            )
             if schedule_type is None:
                 return common_response(BadRequest(message="Schedule type not found"))
 
@@ -200,15 +210,20 @@ async def update_schedule(
                 start_time = request.start
 
             if request.end < start_time:
-                return common_response(BadRequest(message="End time must be after start time"))
+                return common_response(
+                    BadRequest(message="End time must be after start time")
+                )
 
         update_data = request.model_dump(exclude_unset=True)
         updated_schedule = scheduleRepo.update_schedule(db, schedule, **update_data)
 
-        return common_response(Ok(data=ScheduleDetail.model_validate(updated_schedule).model_dump()))
+        return common_response(
+            Ok(data=ScheduleDetail.model_validate(updated_schedule).model_dump())
+        )
     except Exception as e:
         logger.error(f"Failed to update schedule by id {schedule_id}: {e}")
         return common_response(InternalServerError(error=str(e)))
+
 
 @router.post(
     "/{schedule_id}/recreate-stream",
@@ -239,7 +254,9 @@ async def recreate_stream(
         stream_asset = streamingRepo.get_stream_by_schedule_id(db, schedule_id)
         if stream_asset is not None:
             if stream_asset.status == StreamStatus.STREAMING:
-                return common_response(BadRequest(message="Stream is currently streaming"))
+                return common_response(
+                    BadRequest(message="Stream is currently streaming")
+                )
 
             mux_service.delete_live_stream(stream_asset.mux_live_stream_id)
             streamingRepo.delete_stream(db, stream_asset)
@@ -262,7 +279,9 @@ async def recreate_stream(
                 status=StreamStatus.PENDING,
             )
         except Exception as stream_error:
-            logger.error(f"Failed to create stream for schedule {schedule.id}: {stream_error}")
+            logger.error(
+                f"Failed to create stream for schedule {schedule.id}: {stream_error}"
+            )
 
         return common_response(NoContent())
     except Exception as e:

@@ -6,6 +6,7 @@ from sqlalchemy import UUID, DateTime, ForeignKey, String
 from sqlalchemy.orm import mapped_column, Mapped, relationship
 from sqlalchemy.dialects.postgresql import ARRAY
 
+
 class Schedule(Base):
     __tablename__ = "schedule"
 
@@ -35,9 +36,7 @@ class Schedule(Base):
     slide_language: Mapped[str] = mapped_column("slide_language", String, nullable=True)
     slide_title: Mapped[str] = mapped_column("slide_title", String, nullable=True)
     slide_link: Mapped[str] = mapped_column("slide_link", String, nullable=True)
-    tags: Mapped[List[str]] = mapped_column(
-        "tags", ARRAY(String), nullable=True
-    )
+    tags: Mapped[List[str]] = mapped_column("tags", ARRAY(String), nullable=True)
 
     start = mapped_column("start", DateTime(timezone=True), nullable=True)
     end = mapped_column("end", DateTime(timezone=True), nullable=True)
@@ -59,8 +58,5 @@ class Schedule(Base):
     room = relationship("Room", back_populates="schedules")
     schedule_type = relationship("ScheduleType", back_populates="schedules")
     stream = relationship(
-        "Stream",
-        back_populates="schedule",
-        uselist=False,
-        cascade="all, delete-orphan"
+        "Stream", back_populates="schedule", uselist=False, cascade="all, delete-orphan"
     )

@@ -73,7 +73,6 @@ class MuxService:
             stream_id = live_stream.data.id
             stream_key = live_stream.data.stream_key
 
-
             # Get playback ID
             playback_id = None
             if live_stream.data.playback_ids:
@@ -233,7 +232,7 @@ class MuxService:
             "sub": playback_id,
             "aud": "t",  # 't' for thumbnail
             "exp": exp_timestamp,
-            "kid": settings.MUX_SIGNING_KEY_ID
+            "kid": settings.MUX_SIGNING_KEY_ID,
         }
 
         # Decode base64 private key from Mux

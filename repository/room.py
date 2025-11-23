@@ -16,6 +16,7 @@ def get_rooms(db: Session, search: Optional[str] = None) -> list[Room]:
 
     return list(db.execute(stmt).scalars().all())
 
+
 def get_room_by_id(db: Session, room_id: Union[UUID, str]) -> Optional[Room]:
     stmt = select(Room).where(Room.id == room_id)
     return db.execute(stmt).scalar_one_or_none()
