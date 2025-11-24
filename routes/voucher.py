@@ -49,6 +49,7 @@ def list_vouchers(
             page=query.page,
             page_size=query.page_size,
             search=query.search,
+            all=query.all,
         )
         return VoucherListResponse.model_validate(data)
     except Exception as e:

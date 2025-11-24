@@ -113,6 +113,7 @@ def get_vouchers_per_page(
     page: int,
     page_size: int,
     search: Optional[str] = None,
+    all: bool = False,
 ) -> dict:
     offset = (page - 1) * page_size
 
@@ -125,11 +126,15 @@ def get_vouchers_per_page(
 
     total_count = db.scalar(select(func.count()).select_from(stmt.subquery()))
 
-    stmt = stmt.offset(offset).limit(page_size)
+    if all is False:
+        stmt = stmt.offset(offset).limit(page_size)
 
     results = db.scalars(stmt).all()
     results_schema = [VoucherResponseItem.model_validate(r) for r in results]
-    page_count = (total_count + page_size - 1) // page_size if total_count else 0
+    if all:
+        page_count = 1 if total_count else 0
+    else:
+        page_count = (total_count + page_size - 1) // page_size if total_count else 0
 
     return {
         "page": page,
