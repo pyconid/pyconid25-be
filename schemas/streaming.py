@@ -1,6 +1,5 @@
-from uuid import UUID
 from datetime import datetime
-from typing import List, Optional
+from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -31,16 +30,3 @@ class PlaybackURLResponse(BaseModel):
     token_expires_at: Optional[datetime] = Field(
         None, description="Token expiration time for private streams"
     )
-
-
-class MuxStreamDetail(BaseModel):
-    id: str
-    status: str
-    stream_key: str
-    stream_url: str
-
-    class PlaybackIds(BaseModel):
-        id: str
-        policy: str
-
-    playback_ids: List[PlaybackIds]

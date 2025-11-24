@@ -1,10 +1,9 @@
-from schemas.streaming import MuxStreamDetail
 import base64
 import hashlib
 import hmac
 import time
 from datetime import datetime, timedelta
-from typing import Optional, Tuple
+from typing import Dict, Optional, Tuple
 
 import jwt
 import mux_python
@@ -86,7 +85,7 @@ class MuxService:
             logger.error(f"Failed to create Mux live stream: {e}")
             raise
 
-    def get_live_stream(self, stream_id: str) -> MuxStreamDetail:
+    def get_live_stream(self, stream_id: str) -> Dict:
         """
         Get live stream details from Mux
 
@@ -101,16 +100,16 @@ class MuxService:
         """
         try:
             live_stream = self.live_streams_api.get_live_stream(stream_id)
-            return MuxStreamDetail(
-                id=live_stream.data.id,
-                status=live_stream.data.status,
-                stream_key=live_stream.data.stream_key,
-                playback_ids=[
+            return {
+                "id": live_stream.data.id,
+                "status": live_stream.data.status,
+                "stream_key": live_stream.data.stream_key,
+                "playback_ids": [
                     {"id": pid.id, "policy": pid.policy}
                     for pid in live_stream.data.playback_ids or []
                 ],
-                stream_url=self.stream_url,
-            )
+                "stream_url": self.stream_url,
+            }
         except ApiException as e:
             logger.error(f"Failed to get live stream {stream_id}: {e}")
             raise

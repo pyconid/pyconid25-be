@@ -128,3 +128,18 @@ class ScheduleResponse(BaseModel):
     count: int
     page_count: int
     results: List[ScheduleResponseItem]
+
+
+class MuxStreamDetail(BaseModel):
+    id: str
+    status: str
+    stream_key: str
+    stream_url: str
+
+    class PlaybackIds(BaseModel):
+        id: str
+        policy: str
+
+    playback_ids: List[PlaybackIds]
+
+    model_config = {"extra": "allow"}

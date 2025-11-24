@@ -1,16 +1,11 @@
 from core.responses import handle_http_exception
 import traceback
 from core.log import logger
-import traceback
-from schemas.streaming import MuxStreamDetail
-from models.User import MANAGEMENT_PARTICIPANT
-from core.responses import Forbidden
 from datetime import datetime
 import json
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import JSONResponse
 from pytz import timezone
 from sqlalchemy.orm import Session
 
@@ -119,42 +114,6 @@ async def get_stream_playback(
         )
     except HTTPException as e:
         return handle_http_exception(e)
-    except Exception as e:
-        traceback.print_exc()
-        return common_response(InternalServerError(error=str(e)))
-
-
-@router.get(
-    "/{stream_id}/stream",
-    responses={
-        "200": {"model": MuxStreamDetail},
-        "404": {"model": NotFoundResponse},
-        "500": {"model": InternalServerErrorResponse},
-    },
-)
-async def get_mux_stream(
-    stream_id: UUID,
-    db: Session = Depends(get_db_sync),
-    token: str = Depends(oauth2_scheme),
-):
-    try:
-        current_user = get_user_from_token(db=db, token=token)
-        if current_user is None:
-            return common_response(Unauthorized(message="Unauthorized"))
-
-        if current_user.participant_type != MANAGEMENT_PARTICIPANT:
-            return common_response(Forbidden())
-
-        stream_asset = streamingRepo.get_stream_by_id(db, stream_id)
-        if not stream_asset:
-            return common_response(NotFound(message="Stream not found"))
-
-        if stream_asset.schedule.deleted_at:
-            return common_response(NotFound(message="Stream not found"))
-
-        mux_stream = mux_service.get_live_stream(stream_asset.mux_live_stream_id)
-
-        return common_response(Ok(data=mux_stream.model_dump()))
     except Exception as e:
         traceback.print_exc()
         return common_response(InternalServerError(error=str(e)))

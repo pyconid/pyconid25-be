@@ -1,3 +1,4 @@
+import traceback
 from schemas.common import ForbiddenResponse
 from models.User import MANAGEMENT_PARTICIPANT
 from core.responses import Forbidden
@@ -8,6 +9,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends
 from schemas.schedule import (
     CreateScheduleRequest,
+    MuxStreamDetail,
     ScheduleDetail,
     ScheduleQuery,
     ScheduleResponse,
@@ -157,6 +159,44 @@ async def get_schedule_by_id(
         )
     except Exception as e:
         logger.error(f"Failed to get schedule by id {schedule_id}: {e}")
+        return common_response(InternalServerError(error=str(e)))
+
+
+@router.get(
+    "/{schedule_id}/stream",
+    responses={
+        "200": {"model": MuxStreamDetail},
+        "404": {"model": NotFoundResponse},
+        "500": {"model": InternalServerErrorResponse},
+    },
+)
+async def get_mux_stream_by_schedule_id(
+    schedule_id: UUID,
+    db: Session = Depends(get_db_sync),
+    token: str = Depends(oauth2_scheme),
+):
+    try:
+        current_user = get_user_from_token(db=db, token=token)
+        if current_user is None:
+            return common_response(Unauthorized(message="Unauthorized"))
+
+        if current_user.participant_type != MANAGEMENT_PARTICIPANT:
+            return common_response(Forbidden())
+
+        stream_asset = streamingRepo.get_stream_by_schedule_id(db, schedule_id)
+        if not stream_asset:
+            return common_response(NotFound(message="Stream not found"))
+
+        if stream_asset.schedule.deleted_at:
+            return common_response(NotFound(message="Stream not found"))
+
+        mux_stream = mux_service.get_live_stream(stream_asset.mux_live_stream_id)
+
+        return common_response(
+            Ok(data=MuxStreamDetail(**mux_stream).model_dump(mode="json"))
+        )
+    except Exception as e:
+        traceback.print_exc()
         return common_response(InternalServerError(error=str(e)))
 
 
