@@ -336,7 +336,7 @@ class TestVoucher(IsolatedAsyncioTestCase):
         self.session.commit()
 
         response = self.client.get(
-            "/voucher/?page=1&page_size=5",
+            "/voucher/?page=1&page_size=5&all=false",
             headers={"Authorization": f"Bearer {token}"},
         )
         assert response.status_code == 200
@@ -347,13 +347,35 @@ class TestVoucher(IsolatedAsyncioTestCase):
         assert data["count"] >= 15
 
         response_page2 = self.client.get(
-            "/voucher/?page=2&page_size=5",
+            "/voucher/?page=2&page_size=5&all=false",
             headers={"Authorization": f"Bearer {token}"},
         )
         assert response_page2.status_code == 200
         data_page2 = response_page2.json()
         assert data_page2["page"] == 2
         assert len(data_page2["results"]) == 5
+
+    async def test_list_vouchers_all(self):
+        (token, _) = await generate_token_from_user(db=self.session, user=self.user)
+        for i in range(9):
+            voucher = Voucher(
+                id=uuid.uuid4(),
+                code=f"VOUCHER{i:03d}",
+                value=1000 * i,
+                quota=10,
+                is_active=True,
+            )
+            self.session.add(voucher)
+        self.session.commit()
+
+        response = self.client.get(
+            "/voucher/?page=1&page_size=5",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert response.status_code == 200
+
+        data = response.json()
+        assert len(data["results"]) == 10
 
     async def test_list_vouchers_with_search(self):
         (token, _) = await generate_token_from_user(db=self.session, user=self.user)
