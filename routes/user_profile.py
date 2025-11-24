@@ -213,6 +213,7 @@ async def update_user_profile(
 
     # 2. Gabungkan data. user_form.model_dump() akan berisi
     user_profile_dict = user_profile_pydantic.model_dump()
+    user_profile_dict["participant_type"] = user.participant_type
     if profile_picture_url:
         user_profile_dict["profile_picture"] = profile_picture_url
 
