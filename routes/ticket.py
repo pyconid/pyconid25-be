@@ -11,6 +11,7 @@ from schemas.ticket import (
     MyTicketInfo,
     MyTicketPayment,
     MyTicketVoucher,
+    UserInfo,
 )
 from schemas.common import (
     UnauthorizedResponse,
@@ -93,6 +94,12 @@ async def get_my_ticket(
                 ),
             ),
             participant_type=user.participant_type or ticket.user_participant_type,
+            user=UserInfo(
+                id=str(user.id),
+                first_name=user.first_name,
+                last_name=user.last_name,
+                t_shirt_size=user.t_shirt_size,
+            ),
         )
 
         return common_response(

@@ -20,6 +20,7 @@ class User(BaseModel):
     id: str
     first_name: Optional[str]
     last_name: Optional[str]
+    t_shirt_size: Optional[str]
 
 
 class CreatePaymentRequest(BaseModel):

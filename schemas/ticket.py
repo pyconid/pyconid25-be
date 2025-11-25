@@ -16,6 +16,13 @@ class TicketListResponse(BaseModel):
     results: List[TicketResponse]
 
 
+class UserInfo(BaseModel):
+    id: str
+    first_name: Optional[str]
+    last_name: Optional[str]
+    t_shirt_size: Optional[str]
+
+
 class MyTicketInfo(BaseModel):
     id: str
     name: str
@@ -40,6 +47,7 @@ class MyTicket(BaseModel):
     ticket: MyTicketInfo
     payment: MyTicketPayment
     participant_type: str
+    user: UserInfo
 
 
 class MyTicketResponse(BaseModel):
