@@ -10,6 +10,7 @@ class EmailWhiteListDict(TypedDict):
 
 
 class VoucherQuery(BaseModel):
+    all: bool = Query(True, description="Get all vouchers without pagination")
     page: int = Query(1, description="Page Number")
     page_size: int = Query(10, description="Page Size")
     search: Optional[str] = Query(None, description="Search by voucher code")

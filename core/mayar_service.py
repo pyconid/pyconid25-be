@@ -7,6 +7,7 @@ from pytz import timezone
 
 from core.log import logger
 from models.Ticket import Ticket
+from models.Voucher import Voucher
 from settings import FRONTEND_BASE_URL, MAYAR_PAYMENT_EXPIRE_HOURS, TZ
 
 
@@ -25,6 +26,7 @@ class MayarService:
         customer_email: str,
         customer_name: str,
         customer_phone: str = "",
+        voucher: Optional[Voucher] = None,
         tx_internal_id: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
@@ -75,7 +77,7 @@ class MayarService:
             "description": description,
             "redirectUrl": redirect_url,
             "expiredAt": expired_at.isoformat(),
-            "amount": ticket.price,
+            "amount": ticket.price - voucher.value if voucher else ticket.price,
             # "items": items,
         }
 
@@ -88,8 +90,11 @@ class MayarService:
                     timeout=30.0,
                 )
                 response.raise_for_status()
+                print(response.status_code)
                 result = response.json()
-
+                print(
+                    f"Mayar create payment response: status:{response.status_code} {result}"
+                )
                 logger.info(f"Payment created successfully: {result}")
                 return result
         except httpx.HTTPStatusError as e:

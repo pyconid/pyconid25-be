@@ -40,7 +40,7 @@ class CreatePaymentResponse(BaseModel):
 class DetailPaymentResponse(BaseModel):
     id: str
     user: User
-    payment_link: str
+    payment_link: Optional[str] = None
     status: Union[PaymentStatus, str]
     created_at: datetime
     paid_at: Optional[datetime] = None
