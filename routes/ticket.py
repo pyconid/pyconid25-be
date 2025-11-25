@@ -109,3 +109,8 @@ async def get_my_ticket(
         return common_response(
             InternalServerError(error=f"Internal Server Error: {str(e)}")
         )
+
+
+@router.get("/checkin")
+async def checkin(db: Session = Depends(get_db_sync)):
+    return {"message": "Check-in endpoint - to be implemented"}
