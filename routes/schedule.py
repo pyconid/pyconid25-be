@@ -180,7 +180,7 @@ async def get_schedule_cms(
                     ),
                     page=(query.page if not query.all and query.page else 1),
                     page_count=(
-                        num_page if not query.all and num_data is not None else 1
+                        num_page if not query.all and num_page is not None else 1
                     ),
                     results=[
                         ScheduleCMSResponseItem(
@@ -380,7 +380,11 @@ async def update_schedule(
         updated_schedule = scheduleRepo.update_schedule(db, schedule, **update_data)
 
         return common_response(
-            Ok(data=ScheduleDetail.model_validate(updated_schedule).model_dump(mode="json"))
+            Ok(
+                data=ScheduleDetail.model_validate(updated_schedule).model_dump(
+                    mode="json"
+                )
+            )
         )
     except Exception as e:
         logger.error(f"Failed to update schedule by id {schedule_id}: {e}")
