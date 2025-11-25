@@ -10,9 +10,15 @@ from fastapi import APIRouter, Depends
 from schemas.schedule import (
     CreateScheduleRequest,
     MuxStreamDetail,
+    PublicScheduleDetail,
+    RoomInfo,
+    ScheduleCMSResponse,
+    ScheduleCMSResponseItem,
     ScheduleDetail,
     ScheduleQuery,
     ScheduleResponse,
+    ScheduleTypeInfo,
+    SimplePublicSpeakerInfo,
     UpdateScheduleRequest,
 )
 from sqlalchemy.orm import Session
@@ -61,6 +67,7 @@ async def create_schedule(
     db: Session = Depends(get_db_sync),
     token: str = Depends(oauth2_scheme),
 ):
+    mux_stream_id = None
     try:
         current_user = get_user_from_token(db=db, token=token)
         if current_user is None:
@@ -93,7 +100,6 @@ async def create_schedule(
             description=request.description,
             presentation_language=request.presentation_language,
             slide_language=request.slide_language,
-            slide_title=request.slide_title,
             slide_link=request.slide_link,
             tags=request.tags,
             start=request.start,
@@ -105,17 +111,17 @@ async def create_schedule(
             (
                 mux_stream_id,
                 stream_key,
-                stream_url,
                 playback_id,
-            ) = mux_service.create_live_stream(is_public=False)
+            ) = mux_service.create_live_stream(is_public=True)
 
             # Create stream asset linked to this schedule
             streamingRepo.create_stream(
                 db=db,
-                is_public=False,
+                is_public=True,
                 schedule_id=schedule.id,
                 mux_live_stream_id=mux_stream_id,
                 mux_playback_id=playback_id,
+                mux_stream_key=stream_key,
                 status=StreamStatus.PENDING,
             )
         except Exception as stream_error:
@@ -134,13 +140,79 @@ async def create_schedule(
 
     except Exception as e:
         logger.error(f"Failed to create schedule: {e}")
+        if mux_stream_id is not None:
+            mux_service.delete_live_stream(mux_stream_id)
+        return common_response(InternalServerError(error=str(e)))
+
+
+@router.get(
+    "/cms",
+    responses={
+        "200": {"model": ScheduleCMSResponse},
+        "500": {"model": InternalServerErrorResponse},
+    },
+)
+async def get_schedule_cms(
+    query: ScheduleQuery = Depends(),
+    db: Session = Depends(get_db_sync),
+    token: str = Depends(oauth2_scheme),
+):
+    try:
+        current_user = get_user_from_token(db=db, token=token)
+        if current_user is None:
+            return common_response(Unauthorized(message="Unauthorized"))
+
+        data, num_data, num_page = scheduleRepo.get_schedule_cms(
+            db=db,
+            page=query.page,
+            page_size=query.page_size,
+            search=query.search,
+            schedule_date=query.schedule_date,
+            all=query.all,
+        )
+
+        return common_response(
+            Ok(
+                data=ScheduleCMSResponse(
+                    count=num_data,
+                    page_size=(
+                        query.page_size if not query.all and query.page_size else 0
+                    ),
+                    page=(query.page if not query.all and query.page else 1),
+                    page_count=(
+                        num_page if not query.all and num_data is not None else 1
+                    ),
+                    results=[
+                        ScheduleCMSResponseItem(
+                            id=str(r.id),
+                            title=r.title,
+                            speaker=SimplePublicSpeakerInfo.model_validate(r.speaker),
+                            room=RoomInfo.model_validate(r.room),
+                            schedule_type=ScheduleTypeInfo.model_validate(
+                                r.schedule_type
+                            ),
+                            stream_key=(
+                                r.stream.mux_stream_key
+                                if r.stream is not None
+                                else None
+                            ),
+                            start=r.start,
+                            end=r.end,
+                        )
+                        for r in data
+                    ],
+                ).model_dump(mode="json")
+            )
+        )
+    except Exception as e:
+        logger.error(f"Failed to get schedule cms: {e}")
         return common_response(InternalServerError(error=str(e)))
 
 
 @router.get(
     "/{schedule_id}",
     responses={
-        "200": {"model": ScheduleDetail},
+        "200": {"model": PublicScheduleDetail},
         "404": {"model": NotFoundResponse},
         "500": {"model": InternalServerErrorResponse},
     },
@@ -154,9 +226,54 @@ async def get_schedule_by_id(
         if not schedule:
             return common_response(NotFound(message="Schedule not found"))
 
-        return common_response(
-            Ok(data=ScheduleDetail.model_validate(schedule).model_dump(mode="json"))
+        schedule_dict = PublicScheduleDetail.model_validate(schedule).model_dump(
+            mode="json"
         )
+
+        # Filter user data based on privacy settings
+        user = schedule.speaker.user
+        user_dict = schedule_dict["speaker"]["user"]
+
+        filtered_user = {
+            "id": user_dict["id"],
+            "username": user_dict["username"],
+            "first_name": user_dict.get("first_name"),
+            "last_name": user_dict.get("last_name"),
+            "bio": user_dict.get("bio"),
+        }
+
+        if user.share_my_email_and_phone_number:
+            filtered_user["email"] = user_dict.get("email")
+            filtered_user["phone"] = user_dict.get("phone")
+        else:
+            filtered_user["email"] = None
+            filtered_user["phone"] = None
+
+        if user.share_my_job_and_company:
+            filtered_user["company"] = user_dict.get("company")
+            filtered_user["job_category"] = user_dict.get("job_category")
+            filtered_user["job_title"] = user_dict.get("job_title")
+        else:
+            filtered_user["company"] = None
+            filtered_user["job_category"] = None
+            filtered_user["job_title"] = None
+
+        if user.share_my_public_social_media:
+            filtered_user["website"] = user_dict.get("website")
+            filtered_user["facebook_username"] = user_dict.get("facebook_username")
+            filtered_user["linkedin_username"] = user_dict.get("linkedin_username")
+            filtered_user["twitter_username"] = user_dict.get("twitter_username")
+            filtered_user["instagram_username"] = user_dict.get("instagram_username")
+        else:
+            filtered_user["website"] = None
+            filtered_user["facebook_username"] = None
+            filtered_user["linkedin_username"] = None
+            filtered_user["twitter_username"] = None
+            filtered_user["instagram_username"] = None
+
+        schedule_dict["speaker"]["user"] = filtered_user
+
+        return common_response(Ok(data=schedule_dict))
     except Exception as e:
         logger.error(f"Failed to get schedule by id {schedule_id}: {e}")
         return common_response(InternalServerError(error=str(e)))
@@ -190,10 +307,15 @@ async def get_mux_stream_by_schedule_id(
         if stream_asset.schedule.deleted_at:
             return common_response(NotFound(message="Stream not found"))
 
-        mux_stream = mux_service.get_live_stream(stream_asset.mux_live_stream_id)
-
         return common_response(
-            Ok(data=MuxStreamDetail(**mux_stream).model_dump(mode="json"))
+            Ok(
+                data=MuxStreamDetail(
+                    stream_id=str(stream_asset.id),
+                    status=stream_asset.status,
+                    stream_key=stream_asset.mux_stream_key,
+                    playback_id=stream_asset.mux_playback_id,
+                ).model_dump(mode="json")
+            )
         )
     except Exception as e:
         traceback.print_exc()
@@ -258,7 +380,7 @@ async def update_schedule(
         updated_schedule = scheduleRepo.update_schedule(db, schedule, **update_data)
 
         return common_response(
-            Ok(data=ScheduleDetail.model_validate(updated_schedule).model_dump())
+            Ok(data=ScheduleDetail.model_validate(updated_schedule).model_dump(mode="json"))
         )
     except Exception as e:
         logger.error(f"Failed to update schedule by id {schedule_id}: {e}")
@@ -279,6 +401,7 @@ async def recreate_stream(
     db: Session = Depends(get_db_sync),
     token: str = Depends(oauth2_scheme),
 ):
+    mux_stream_id = None
     try:
         current_user = get_user_from_token(db=db, token=token)
         if current_user is None:
@@ -305,17 +428,17 @@ async def recreate_stream(
             (
                 mux_stream_id,
                 stream_key,
-                stream_url,
                 playback_id,
-            ) = mux_service.create_live_stream(is_public=False)
+            ) = mux_service.create_live_stream(is_public=True)
 
             # Create stream asset linked to this schedule
             streamingRepo.create_stream(
                 db=db,
-                is_public=False,
+                is_public=True,
                 schedule_id=schedule.id,
                 mux_live_stream_id=mux_stream_id,
                 mux_playback_id=playback_id,
+                mux_stream_key=stream_key,
                 status=StreamStatus.PENDING,
             )
         except Exception as stream_error:
@@ -326,6 +449,8 @@ async def recreate_stream(
         return common_response(NoContent())
     except Exception as e:
         logger.error(f"Failed to update schedule by id {schedule_id}: {e}")
+        if mux_stream_id is not None:
+            mux_service.delete_live_stream(mux_stream_id)
         return common_response(InternalServerError(error=str(e)))
 
 
@@ -389,8 +514,8 @@ async def get_schedule(
         else:
             data = scheduleRepo.get_schedule_per_page_by_search(
                 db=db,
-                page=query.page,
-                page_size=query.page_size,
+                page=query.page if query.page else 1,
+                page_size=query.page_size if query.page_size else 10,
                 search=query.search,
                 schedule_date=query.schedule_date,
             )

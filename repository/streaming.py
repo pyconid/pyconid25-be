@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Optional, Union
 from uuid import UUID
 
-from sqlalchemy import and_, func, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from models.Stream import Stream, StreamStatus
@@ -14,6 +14,7 @@ def create_stream(
     schedule_id: Optional[Union[UUID, str]] = None,
     mux_playback_id: Optional[str] = None,
     mux_live_stream_id: Optional[str] = None,
+    mux_stream_key: Optional[str] = None,
     status: StreamStatus = StreamStatus.PENDING,
 ) -> Stream:
     now = datetime.now()
@@ -22,6 +23,7 @@ def create_stream(
         schedule_id=schedule_id,
         mux_playback_id=mux_playback_id,
         mux_live_stream_id=mux_live_stream_id,
+        mux_stream_key=mux_stream_key,
         status=status,
         created_at=now,
         updated_at=now,
@@ -44,35 +46,16 @@ def get_stream_by_mux_id(db: Session, mux_id: str) -> Optional[Stream]:
     return db.execute(stmt).scalar_one_or_none()
 
 
+def get_stream_by_mux_asset_id(db: Session, asset_id: str) -> Optional[Stream]:
+    stmt = select(Stream).where(Stream.mux_asset_id == asset_id)
+    return db.execute(stmt).scalar_one_or_none()
+
+
 def get_stream_by_schedule_id(
     db: Session, schedule_id: Union[UUID, str]
 ) -> Optional[Stream]:
     stmt = select(Stream).where(Stream.schedule_id == schedule_id)
     return db.execute(stmt).scalar_one_or_none()
-
-
-def list_stream(
-    db: Session,
-    skip: int = 0,
-    limit: int = 20,
-    is_public: Optional[bool] = None,
-    status: Optional[StreamStatus] = None,
-) -> tuple[list[Stream], int]:
-    stmt = select(Stream)
-
-    if is_public is not None:
-        stmt = stmt.where(Stream.is_public == is_public)
-    if status is not None:
-        stmt = stmt.where(Stream.status == status)
-
-    count_stmt = select(func.count()).select_from(stmt.subquery())
-    total = db.execute(count_stmt).scalar_one_or_none() or 0
-
-    stmt = stmt.order_by(Stream.created_at.desc()).offset(skip).limit(limit)
-
-    items = db.execute(stmt).scalars().all()
-
-    return list(items), total
 
 
 def update_stream(db: Session, stream_asset: Stream, **kwargs) -> Stream:

@@ -6,7 +6,7 @@ from enum import Enum
 from fastapi import Query
 from pydantic import BaseModel, model_validator
 
-from schemas.speaker import SpeakerResponseItem
+from schemas.speaker_type import DetailSpeakerResponse
 
 
 class Language(str, Enum):
@@ -15,8 +15,8 @@ class Language(str, Enum):
 
 
 class ScheduleQuery(BaseModel):
-    page: int = Query(1, description="Page Number")
-    page_size: int = Query(1, description="Page Size")
+    page: Optional[int] = Query(1, description="Page Number")
+    page_size: Optional[int] = Query(1, description="Page Size")
     schedule_date: Optional[date] = Query(None, description="Schedule Date")
     search: Optional[str] = Query(None, description="Search by title name")
     all: Optional[bool] = Query(None, description="Return all schedule data if true")
@@ -30,7 +30,6 @@ class CreateScheduleRequest(BaseModel):
     description: Optional[str] = None
     presentation_language: Optional[Language] = None
     slide_language: Optional[Language] = None
-    slide_title: Optional[str] = None
     slide_link: Optional[str] = None
     tags: Optional[List[str]] = None
     start: datetime
@@ -51,7 +50,6 @@ class UpdateScheduleRequest(BaseModel):
     description: Optional[str] = None
     presentation_language: Optional[Language] = None
     slide_language: Optional[Language] = None
-    slide_title: Optional[str] = None
     slide_link: Optional[str] = None
     tags: Optional[List[str]] = None
     start: Optional[datetime] = None
@@ -86,16 +84,78 @@ class StreamInfo(BaseModel):
     model_config = {"from_attributes": True}
 
 
-class ScheduleDetail(BaseModel):
+class PublicSpeakerUser(BaseModel):
+    id: UUID
+    username: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    bio: Optional[str] = None
+    company: Optional[str] = None
+    job_category: Optional[str] = None
+    job_title: Optional[str] = None
+    website: Optional[str] = None
+    facebook_username: Optional[str] = None
+    linkedin_username: Optional[str] = None
+    twitter_username: Optional[str] = None
+    instagram_username: Optional[str] = None
+
+    model_config = {"from_attributes": True}
+
+
+class PublicSpeakerInfo(BaseModel):
+    id: UUID
+    user: PublicSpeakerUser
+    speaker_type: Optional[DetailSpeakerResponse] = None
+    model_config = {"from_attributes": True}
+
+
+class PublicScheduleDetail(BaseModel):
     id: UUID
     title: str
-    speaker: SpeakerResponseItem
+    speaker: PublicSpeakerInfo
     room: RoomInfo
     schedule_type: ScheduleTypeInfo
     description: Optional[str] = None
     presentation_language: Optional[Language] = None
     slide_language: Optional[Language] = None
-    slide_title: Optional[str] = None
+    slide_link: Optional[str] = None
+    tags: Optional[List[str]] = None
+    start: datetime
+    end: datetime
+    created_at: datetime
+    updated_at: datetime
+    stream: Optional[StreamInfo] = None
+
+    model_config = {"from_attributes": True}
+
+
+class SimplePublicSpeakerUser(BaseModel):
+    id: UUID
+    username: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+
+    model_config = {"from_attributes": True}
+
+
+class SimplePublicSpeakerInfo(BaseModel):
+    id: UUID
+    user: SimplePublicSpeakerUser
+    speaker_type: Optional[DetailSpeakerResponse] = None
+    model_config = {"from_attributes": True}
+
+
+class ScheduleDetail(BaseModel):
+    id: UUID
+    title: str
+    speaker: SimplePublicSpeakerInfo
+    room: RoomInfo
+    schedule_type: ScheduleTypeInfo
+    description: Optional[str] = None
+    presentation_language: Optional[Language] = None
+    slide_language: Optional[Language] = None
     slide_link: Optional[str] = None
     tags: Optional[List[str]] = None
     start: datetime
@@ -110,14 +170,13 @@ class ScheduleDetail(BaseModel):
 class ScheduleResponseItem(BaseModel):
     id: UUID
     title: str
-    speaker: SpeakerResponseItem
+    speaker: SimplePublicSpeakerInfo
     presentation_language: Optional[Language] = None
     tags: Optional[List[str]] = None
     start: datetime
     end: datetime
     created_at: datetime
     updated_at: datetime
-    stream: Optional[StreamInfo] = None
 
     model_config = {"from_attributes": True}
 
@@ -131,15 +190,27 @@ class ScheduleResponse(BaseModel):
 
 
 class MuxStreamDetail(BaseModel):
-    id: str
+    stream_id: str
     status: str
     stream_key: str
-    stream_url: str
-
-    class PlaybackIds(BaseModel):
-        id: str
-        policy: str
-
-    playback_ids: List[PlaybackIds]
-
+    playback_id: str
     model_config = {"extra": "allow"}
+
+
+class ScheduleCMSResponseItem(BaseModel):
+    id: str
+    title: str
+    speaker: SimplePublicSpeakerInfo
+    room: RoomInfo
+    schedule_type: ScheduleTypeInfo
+    stream_key: Optional[str] = None
+    start: datetime
+    end: datetime
+
+
+class ScheduleCMSResponse(BaseModel):
+    page: int
+    page_size: int
+    count: int
+    page_count: int
+    results: List[ScheduleCMSResponseItem]

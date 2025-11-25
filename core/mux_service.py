@@ -35,7 +35,7 @@ class MuxService:
 
     def create_live_stream(
         self, is_public: bool = True
-    ) -> Tuple[str, str, str, Optional[str]]:
+    ) -> Tuple[str, str, Optional[str]]:
         """
         Create a new live stream in Mux
 
@@ -79,7 +79,7 @@ class MuxService:
 
             logger.info(f"Created Mux live stream: {stream_id}")
 
-            return stream_id, stream_key, self.stream_url, playback_id
+            return stream_id, stream_key, playback_id
 
         except ApiException as e:
             logger.error(f"Failed to create Mux live stream: {e}")

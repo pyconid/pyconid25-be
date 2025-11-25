@@ -1,6 +1,6 @@
+from math import ceil
 from sqlalchemy.sql.operators import or_
-from models.ScheduleType import ScheduleType
-from typing import List
+from typing import List, Tuple
 from datetime import datetime, date
 from typing import Optional, Union
 from uuid import UUID
@@ -108,6 +108,60 @@ def get_schedule_per_page_by_search(
     }
 
 
+def get_schedule_cms(
+    db: Session,
+    page: Optional[int] = None,
+    page_size: Optional[int] = None,
+    search: Optional[str] = None,
+    schedule_date: Optional[Union[str, date]] = None,
+    all: Optional[bool] = False,
+) -> Tuple[List[Schedule], int, Optional[int]]:
+    num_page = None
+
+    stmt = (
+        select(Schedule)
+        .options(
+            joinedload(Schedule.speaker),
+            joinedload(Schedule.room),
+            joinedload(Schedule.schedule_type),
+            joinedload(Schedule.stream),
+        )
+        .where(
+            Schedule.deleted_at.is_(None),
+        )
+    )
+    stmt_count = select(func.count(Schedule.id)).where(
+        Schedule.deleted_at.is_(None),
+    )
+
+    if search is not None:
+        search_term = Schedule.title.ilike(f"%{search}%")
+        stmt = stmt.where(search_term)
+        stmt_count = stmt_count.where(search_term)
+
+    if schedule_date is not None:
+        date_term = or_(
+            func.date(Schedule.start) == schedule_date,
+            func.date(Schedule.end) == schedule_date,
+        )
+        stmt = stmt.where(date_term)
+        stmt_count = stmt_count.where(date_term)
+
+    num_data = db.execute(stmt_count).scalar() or 0
+
+    if not all and page is not None and page_size is not None:
+        limit = page_size
+        offset = (page - 1) * limit
+        stmt = stmt.order_by(Schedule.updated_at.desc()).limit(limit).offset(offset)
+        num_page = ceil(num_data / limit) if num_data > 0 else 1
+    else:
+        stmt = stmt.order_by(Schedule.updated_at.desc())
+
+    results = db.execute(stmt).scalars().all()
+
+    return results, num_data, num_page
+
+
 def create_schedule(
     db: Session,
     title: str,
@@ -117,7 +171,6 @@ def create_schedule(
     description: Optional[str] = None,
     presentation_language: Optional[str] = None,
     slide_language: Optional[str] = None,
-    slide_title: Optional[str] = None,
     slide_link: Optional[str] = None,
     tags: Optional[List[str]] = None,
     start: Optional[datetime] = None,
@@ -131,7 +184,6 @@ def create_schedule(
         description=description,
         presentation_language=presentation_language,
         slide_language=slide_language,
-        slide_title=slide_title,
         slide_link=slide_link,
         tags=tags,
         start=start,

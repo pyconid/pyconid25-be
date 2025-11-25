@@ -34,7 +34,6 @@ class Schedule(Base):
         "presentation_language", String, nullable=True
     )
     slide_language: Mapped[str] = mapped_column("slide_language", String, nullable=True)
-    slide_title: Mapped[str] = mapped_column("slide_title", String, nullable=True)
     slide_link: Mapped[str] = mapped_column("slide_link", String, nullable=True)
     tags: Mapped[List[str]] = mapped_column("tags", ARRAY(String), nullable=True)
 

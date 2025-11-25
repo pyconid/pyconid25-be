@@ -104,7 +104,9 @@ async def validate_voucher(
 
         if not user.email:
             return common_response(
-                BadRequest(message="Silakan lengkapi email terlebih dahulu.")
+                BadRequest(
+                    message="Users must complete their email address first. Please update your profile."
+                )
             )
 
         voucher = voucherRepo.get_voucher_by_code(db=db, code=code)

@@ -2,13 +2,14 @@ import uuid
 from datetime import datetime
 
 from models import Base
-from sqlalchemy import UUID, Boolean, DateTime, String, Text, ForeignKey, Enum
+from sqlalchemy import UUID, Boolean, DateTime, String, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 import enum
 
 
 class StreamStatus(enum.StrEnum):
     PENDING = "PENDING"
+    READY = "READY"
     STREAMING = "STREAMING"
     ENDED = "ENDED"
     FAILED = "FAILED"
@@ -32,6 +33,15 @@ class Stream(Base):
     )
     mux_live_stream_id: Mapped[str] = mapped_column(
         "mux_live_stream_id", String(255), nullable=True, index=True
+    )
+    mux_stream_key: Mapped[str] = mapped_column(
+        "mux_stream_key", String(255), nullable=True, index=True
+    )
+    mux_asset_id: Mapped[str] = mapped_column(
+        "mux_asset_id", String(255), nullable=True, index=True
+    )
+    mux_asset_playback_id: Mapped[str] = mapped_column(
+        "mux_asset_playback_id", String(255), nullable=True, index=True
     )
 
     is_public: Mapped[bool] = mapped_column(
