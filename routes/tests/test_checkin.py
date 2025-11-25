@@ -92,22 +92,19 @@ class TestCheckIn(IsolatedAsyncioTestCase):
         app.dependency_overrides[get_db_sync] = get_db_sync_for_test(db=self.db)
         self.client = TestClient(app)
 
-
     def tearDown(self) -> None:
         self.db.close()
         self.trans.rollback()
         self.connection.close()
-        
+
     def test_get_user_data_by_payment_id(self):
         pass
-    
+
     def test_get_user_data_by_payment_id_not_found(self):
         pass
-    
+
     def test_get_user_data_by_payment_id_invalid(self):
         pass
-    
+
     def test_get_user_data_with_no_tshirt_size(self):
         pass
-    
-    

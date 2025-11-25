@@ -4,7 +4,13 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from core.log import logger
-from core.responses import InternalServerError, Ok, Unauthorized, common_response, NotFound
+from core.responses import (
+    InternalServerError,
+    Ok,
+    Unauthorized,
+    common_response,
+    NotFound,
+)
 from core.security import get_user_from_token, oauth2_scheme
 from models import get_db_sync
 from repository import payment as paymentRepo
@@ -116,21 +122,20 @@ async def get_my_ticket(
         )
 
 
-@router.get("/checkin/{payment_id}",
-            responses={
+@router.get(
+    "/checkin/{payment_id}",
+    responses={
         "200": {"model": CheckinUserResponse},
         "404": {"model": NotFoundResponse},
         "500": {"model": InternalServerErrorResponse},
-    }
-            )
+    },
+)
 async def checkin(payment_id: str, db: Session = Depends(get_db_sync)):
     try:
         result = get_user_data_by_payment_id(db, payment_id)
         if result is None:
             return common_response(
-                NotFound(
-                    message=f"No user found for payment ID: {payment_id}"
-                )
+                NotFound(message=f"No user found for payment ID: {payment_id}")
             )
         response = CheckinUserResponse(
             id=str(result.id),
