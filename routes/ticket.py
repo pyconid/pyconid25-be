@@ -1,25 +1,29 @@
+import traceback
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+
+from core.log import logger
+from core.responses import InternalServerError, Ok, Unauthorized, common_response, NotFound
+from core.security import get_user_from_token, oauth2_scheme
 from models import get_db_sync
-from repository.ticket import get_active_tickets
 from repository import payment as paymentRepo
+from repository.checkin import get_user_data_by_payment_id
+from repository.ticket import get_active_tickets
+from schemas.checkin import CheckinUserResponse
+from schemas.common import (
+    InternalServerErrorResponse,
+    UnauthorizedResponse,
+)
 from schemas.ticket import (
-    MyTicketResponse,
-    TicketListResponse,
-    TicketResponse,
     MyTicket,
     MyTicketInfo,
     MyTicketPayment,
+    MyTicketResponse,
     MyTicketVoucher,
+    TicketListResponse,
+    TicketResponse,
 )
-from schemas.common import (
-    UnauthorizedResponse,
-    InternalServerErrorResponse,
-)
-from core.security import get_user_from_token, oauth2_scheme
-from core.responses import common_response, Ok, Unauthorized, InternalServerError
-from core.log import logger
-import traceback
 
 router = APIRouter(prefix="/ticket", tags=["Ticket"])
 
@@ -111,6 +115,35 @@ async def get_my_ticket(
         )
 
 
-@router.get("/checkin")
-async def checkin(db: Session = Depends(get_db_sync)):
-    return {"message": "Check-in endpoint - to be implemented"}
+@router.get("/checkin/{payment_id}")
+async def checkin(payment_id: str, db: Session = Depends(get_db_sync)):
+    try:
+        result = get_user_data_by_payment_id(db, payment_id)
+        if result is None:
+            return common_response(
+                NotFound(
+                    message=f"No user found for payment ID: {payment_id}"
+                )
+            )
+        response = CheckinUserResponse(
+            id=str(result.id),
+            email=result.email,
+            first_name=result.first_name,
+            last_name=result.last_name,
+            t_shirt_size=result.t_shirt_size,
+            participant_type=result.participant_type
+        )
+    except Exception as e:
+        traceback.print_exc()
+        logger.error(f"Error in checkin: {e}")
+        return common_response(
+            InternalServerError(error=f"Internal Server Error: {str(e)}")
+        )
+    return common_response(
+        Ok(
+            data={
+                "data": response.model_dump(mode="json"),
+                "message": "Successfully retrieved user checkin data",
+            }
+        )
+    )
