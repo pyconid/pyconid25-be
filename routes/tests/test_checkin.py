@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timedelta
 from unittest import IsolatedAsyncioTestCase
-from unittest.mock import AsyncMock, MagicMock, patch
+from schemas.user_profile import ParticipantType, TShirtSize
 
 import alembic.config
 import jwt
@@ -98,13 +98,100 @@ class TestCheckIn(IsolatedAsyncioTestCase):
         self.connection.close()
 
     def test_get_user_data_by_payment_id(self):
-        pass
+        """Test successful retrieval of user data by payment ID"""
+        response = self.client.get(f"/ticket/checkin/{self.test_payment.id}")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertIn("data", data)
+        self.assertEqual(data["data"]["email"], self.test_user.email)
+        self.assertEqual(data["data"]["first_name"], self.test_user.first_name)
+        self.assertEqual(data["data"]["last_name"], self.test_user.last_name)
 
     def test_get_user_data_by_payment_id_not_found(self):
-        pass
+        """Test 404 response when payment ID does not exist"""
+        non_existent_id = uuid.uuid4()
+        response = self.client.get(f"/ticket/checkin/{non_existent_id}")
+        self.assertEqual(response.status_code, 404)
+        data = response.json()
+        self.assertIn("message", data)
 
     def test_get_user_data_by_payment_id_invalid(self):
-        pass
+        """Test response when payment ID format is invalid"""
+        response = self.client.get("/ticket/checkin/invalid-uuid-format")
+        self.assertIn(response.status_code, [404, 500])
 
     def test_get_user_data_with_no_tshirt_size(self):
-        pass
+        """Test retrieval when user has no t-shirt size set"""
+        response = self.client.get(f"/ticket/checkin/{self.test_payment.id}")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertIn("data", data)
+        self.assertIsNone(data["data"].get("t_shirt_size"))
+
+    def test_get_user_data_with_tshirt_size(self):
+        """Test retrieval when user has t-shirt size set"""
+        self.test_user.t_shirt_size = TShirtSize.L
+        self.db.commit()
+        response = self.client.get(f"/ticket/checkin/{self.test_payment.id}")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["data"]["t_shirt_size"], TShirtSize.L)
+
+    def test_get_user_data_with_attendance_day1(self):
+        """Test retrieval when user has checked in for day 1"""
+        self.test_user.attendance_day_1 = True
+        self.db.commit()
+        response = self.client.get(f"/ticket/checkin/{self.test_payment.id}")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data["data"]["checked_in_day1"])
+
+    def test_get_user_data_with_attendance_day2(self):
+        """Test retrieval when user has checked in for day 2"""
+        self.test_user.attendance_day_2 = True
+        self.db.commit()
+        response = self.client.get(f"/ticket/checkin/{self.test_payment.id}")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data["data"]["checked_in_day2"])
+
+    def test_get_user_data_with_participant_type(self):
+        """Test retrieval when user has participant type set"""
+        self.test_user.participant_type = ParticipantType.IN_PERSON
+        self.db.commit()
+        response = self.client.get(f"/ticket/checkin/{self.test_payment.id}")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["data"]["participant_type"], ParticipantType.IN_PERSON)
+
+    def test_get_user_data_response_structure(self):
+        """Test that response contains all required fields"""
+        response = self.client.get(f"/ticket/checkin/{self.test_payment.id}")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        required_fields = [
+            "id", "email", "first_name", "last_name",
+            "t_shirt_size", "participant_type",
+            "checked_in_day1", "checked_in_day2"
+        ]
+        for field in required_fields:
+            self.assertIn(field, data["data"])
+
+    def test_get_user_data_with_unpaid_payment(self):
+        """Test retrieval with unpaid payment status"""
+        unpaid_payment = Payment(
+            id=uuid.uuid4(),
+            user_id=self.test_user.id,
+            ticket_id=self.test_ticket.id,
+            payment_link="https://mayar.id/pay/unpaid-link",
+            status=PaymentStatus.UNPAID,
+            created_at=datetime.now(tz=timezone(TZ)),
+            mayar_id="mayar-unpaid-id",
+            mayar_transaction_id="mayar-unpaid-tx",
+            amount=500000,
+            description="Unpaid payment",
+        )
+        self.db.add(unpaid_payment)
+        self.db.commit()
+        response = self.client.get(f"/ticket/checkin/{unpaid_payment.id}")
+        self.assertEqual(response.status_code, 200)
