@@ -170,9 +170,14 @@ class TestCheckIn(IsolatedAsyncioTestCase):
         self.assertEqual(response.status_code, 200)
         data = response.json()
         required_fields = [
-            "id", "email", "first_name", "last_name",
-            "t_shirt_size", "participant_type",
-            "checked_in_day1", "checked_in_day2"
+            "id",
+            "email",
+            "first_name",
+            "last_name",
+            "t_shirt_size",
+            "participant_type",
+            "checked_in_day1",
+            "checked_in_day2",
         ]
         for field in required_fields:
             self.assertIn(field, data["data"])
