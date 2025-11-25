@@ -1,5 +1,5 @@
 import traceback
-
+from pydantic import ValidationError
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -14,6 +14,7 @@ from schemas.checkin import CheckinUserResponse
 from schemas.common import (
     InternalServerErrorResponse,
     UnauthorizedResponse,
+    NotFoundResponse,
 )
 from schemas.ticket import (
     MyTicket,
@@ -115,7 +116,13 @@ async def get_my_ticket(
         )
 
 
-@router.get("/checkin/{payment_id}")
+@router.get("/checkin/{payment_id}",
+            responses={
+        "200": {"model": CheckinUserResponse},
+        "404": {"model": NotFoundResponse},
+        "500": {"model": InternalServerErrorResponse},
+    }
+            )
 async def checkin(payment_id: str, db: Session = Depends(get_db_sync)):
     try:
         result = get_user_data_by_payment_id(db, payment_id)
@@ -131,7 +138,15 @@ async def checkin(payment_id: str, db: Session = Depends(get_db_sync)):
             first_name=result.first_name,
             last_name=result.last_name,
             t_shirt_size=result.t_shirt_size,
-            participant_type=result.participant_type
+            participant_type=result.participant_type,
+            checked_in_day1=result.attendance_day_1,
+            checked_in_day2=result.attendance_day_2,
+        )
+    except ValidationError as ve:
+        traceback.print_exc()
+        logger.error(f"Validation error in checkin: {ve}")
+        return common_response(
+            InternalServerError(error=f"Validation Error: {str(ve)}")
         )
     except Exception as e:
         traceback.print_exc()
