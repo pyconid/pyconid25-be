@@ -1,6 +1,5 @@
 from models.ScheduleType import ScheduleType
 from sqlalchemy import select
-from models.Room import Room
 from sqlalchemy.orm import Session
 
 
