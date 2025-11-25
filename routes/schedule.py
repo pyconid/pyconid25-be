@@ -149,6 +149,7 @@ async def create_schedule(
     "/cms",
     responses={
         "200": {"model": ScheduleCMSResponse},
+        "403": {"model": ForbiddenResponse},
         "500": {"model": InternalServerErrorResponse},
     },
 )
@@ -283,6 +284,7 @@ async def get_schedule_by_id(
     "/{schedule_id}/stream",
     responses={
         "200": {"model": MuxStreamDetail},
+        "403": {"model": ForbiddenResponse},
         "404": {"model": NotFoundResponse},
         "500": {"model": InternalServerErrorResponse},
     },
@@ -327,6 +329,7 @@ async def get_mux_stream_by_schedule_id(
     responses={
         "200": {"model": ScheduleDetail},
         "401": {"model": UnauthorizedResponse},
+        "403": {"model": ForbiddenResponse},
         "404": {"model": NotFoundResponse},
         "500": {"model": InternalServerErrorResponse},
     },
@@ -395,7 +398,9 @@ async def update_schedule(
     "/{schedule_id}/recreate-stream",
     responses={
         "204": {"model": NoContentResponse},
+        "400": {"model": BadRequestResponse},
         "401": {"model": UnauthorizedResponse},
+        "403": {"model": ForbiddenResponse},
         "404": {"model": NotFoundResponse},
         "500": {"model": InternalServerErrorResponse},
     },
@@ -406,6 +411,7 @@ async def recreate_stream(
     token: str = Depends(oauth2_scheme),
 ):
     mux_stream_id = None
+    old_mux_stream_id = None
     try:
         current_user = get_user_from_token(db=db, token=token)
         if current_user is None:
@@ -418,6 +424,9 @@ async def recreate_stream(
         if not schedule:
             return common_response(NotFound(message="Schedule not found"))
 
+        if schedule.deleted_at:
+            return common_response(NotFound(message="Schedule not found"))
+
         stream_asset = streamingRepo.get_stream_by_schedule_id(db, schedule_id)
         if stream_asset is not None:
             if stream_asset.status == StreamStatus.STREAMING:
@@ -425,36 +434,45 @@ async def recreate_stream(
                     BadRequest(message="Stream is currently streaming")
                 )
 
-            mux_service.delete_live_stream(stream_asset.mux_live_stream_id)
+            old_mux_stream_id = stream_asset.mux_live_stream_id
             streamingRepo.delete_stream(db, stream_asset)
 
-        try:
-            (
-                mux_stream_id,
-                stream_key,
-                playback_id,
-            ) = mux_service.create_live_stream(is_public=True)
+        # Create new Mux stream
+        (
+            mux_stream_id,
+            stream_key,
+            playback_id,
+        ) = mux_service.create_live_stream(is_public=True)
 
-            # Create stream asset linked to this schedule
-            streamingRepo.create_stream(
-                db=db,
-                is_public=True,
-                schedule_id=schedule.id,
-                mux_live_stream_id=mux_stream_id,
-                mux_playback_id=playback_id,
-                mux_stream_key=stream_key,
-                status=StreamStatus.PENDING,
-            )
-        except Exception as stream_error:
-            logger.error(
-                f"Failed to create stream for schedule {schedule.id}: {stream_error}"
-            )
+        # Create stream asset linked to this schedule
+        streamingRepo.create_stream(
+            db=db,
+            is_public=True,
+            schedule_id=schedule.id,
+            mux_live_stream_id=mux_stream_id,
+            mux_playback_id=playback_id,
+            mux_stream_key=stream_key,
+            status=StreamStatus.PENDING,
+        )
+
+        if old_mux_stream_id is not None:
+            try:
+                mux_service.delete_live_stream(old_mux_stream_id)
+            except Exception as cleanup_error:
+                logger.warning(
+                    f"Failed to cleanup old stream {old_mux_stream_id}: {cleanup_error}"
+                )
 
         return common_response(NoContent())
     except Exception as e:
-        logger.error(f"Failed to update schedule by id {schedule_id}: {e}")
+        logger.error(f"Failed to recreate stream for schedule {schedule_id}: {e}")
         if mux_stream_id is not None:
-            mux_service.delete_live_stream(mux_stream_id)
+            try:
+                mux_service.delete_live_stream(mux_stream_id)
+            except Exception as rollback_error:
+                logger.error(
+                    f"Failed to rollback Mux stream {mux_stream_id}: {rollback_error}"
+                )
         return common_response(InternalServerError(error=str(e)))
 
 
@@ -463,6 +481,7 @@ async def recreate_stream(
     responses={
         "204": {"model": NoContentResponse},
         "401": {"model": UnauthorizedResponse},
+        "403": {"model": ForbiddenResponse},
         "404": {"model": NotFoundResponse},
         "500": {"model": InternalServerErrorResponse},
     },
