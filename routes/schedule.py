@@ -245,10 +245,10 @@ async def get_schedule_by_id(
 
         if user.share_my_email_and_phone_number:
             filtered_user["email"] = user_dict.get("email")
-            filtered_user["phone"] = user_dict.get("phone")
+            # filtered_user["phone"] = user_dict.get("phone")
         else:
             filtered_user["email"] = None
-            filtered_user["phone"] = None
+            # filtered_user["phone"] = None
 
         if user.share_my_job_and_company:
             filtered_user["company"] = user_dict.get("company")

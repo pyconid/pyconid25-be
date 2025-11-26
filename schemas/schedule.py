@@ -90,7 +90,7 @@ class PublicSpeakerUser(BaseModel):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     email: Optional[str] = None
-    phone: Optional[str] = None
+    # phone: Optional[str] = None
     bio: Optional[str] = None
     company: Optional[str] = None
     job_category: Optional[str] = None
