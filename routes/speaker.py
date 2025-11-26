@@ -1,6 +1,8 @@
 from datetime import datetime
 from fastapi import APIRouter, Depends
+from fastapi.responses import FileResponse
 from pytz import timezone
+from core.file import get_file
 from core.security import get_current_user
 from models.User import MANAGEMENT_PARTICIPANT, User
 from schemas.speaker import (
@@ -51,13 +53,14 @@ async def get_speaker(
 ):
     try:
         if query.all:
-            data = speakerRepo.get_all_speakers(db=db)
+            data = speakerRepo.get_all_speakers(db=db, order_dir=query.order_dir)
         else:
             data = speakerRepo.get_speaker_per_page_by_search(
                 db=db,
                 page=query.page,
                 page_size=query.page_size,
                 search=query.search,
+                order_dir=query.order_dir,
             )
     except Exception as e:
         import traceback
@@ -276,8 +279,25 @@ async def delete_speaker_by_id(
 
     data = speakerRepo.get_speaker_by_id(db=db, id=id)
     if data is None:
-        return common_response(NotFound(error=f"Speaker with {id} not found"))
+        return common_response(NotFound(message=f"Speaker with {id} not found"))
 
     speakerRepo.delete_speaker(db=db, speaker=data, is_commit=True)
 
     return common_response(NoContent())
+
+
+@router.get("/{id}/profile-picture/", response_class=FileResponse)
+async def get_speaker_profile_picture(id: str, db: Session = Depends(get_db_sync)):
+    data = speakerRepo.get_speaker_by_id(db=db, id=id)
+    if data is None or data.user.profile_picture is None:
+        return common_response(
+            NotFound(message=f"Profile picture for speaker with {id} not found")
+        )
+
+    photo = get_file(path=data.user.profile_picture)
+    if photo is None:
+        return common_response(
+            NotFound(error=f"Profile picture file for speaker with {id} not found")
+        )
+
+    return photo
