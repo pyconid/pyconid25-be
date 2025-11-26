@@ -176,7 +176,12 @@ class TestUserProfile(IsolatedAsyncioTestCase):
         response = client.put(
             "/user-profile/",
             headers={"Authorization": f"Bearer {token}"},
-            files={"profile_picture": ("profile.jpg", b"filecontent")},
+            files={
+                "profile_picture": (
+                    "profile.jpg",
+                    open("./routes/tests/data/bandungpy.jpg", "rb"),
+                )
+            },
             data={
                 "first_name": "Citra",
                 "last_name": "Wijaya",
@@ -211,7 +216,12 @@ class TestUserProfile(IsolatedAsyncioTestCase):
         response = client.put(
             "/user-profile/",
             headers={"Authorization": f"Bearer {token}"},
-            files={"profile_picture": ("profile.jpg", b"filecontent")},
+            files={
+                "profile_picture": (
+                    "profile.jpg",
+                    open("./routes/tests/data/bandungpy.jpg", "rb"),
+                )
+            },
             data={
                 "profile_picture": "not-a-url",  # URL tidak valid
                 "first_name": "Andi",
@@ -236,6 +246,14 @@ class TestUserProfile(IsolatedAsyncioTestCase):
 
         # Expect 2
         self.assertEqual(response.status_code, 422)
+
+        # When 3
+        response = client.get(
+            f"/user-profile/{token}/profile-picture/",
+        )
+
+        # Expect 3
+        self.assertEqual(response.status_code, 200)
 
     async def test_get_user_profile(self):
         # Given
