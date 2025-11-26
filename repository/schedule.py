@@ -37,7 +37,7 @@ def get_all_schedules(
     results_schema = []
     try:
         # Tambahkan pagination (offset + limit)
-        stmt = stmt.options(joinedload(Schedule.speaker))
+        stmt = stmt.options(joinedload(Schedule.speaker)).order_by(Schedule.start.asc())
 
         # Eksekusi query dan ambil hasilnya
         results = db.scalars(stmt).all()
@@ -87,7 +87,10 @@ def get_schedule_per_page_by_search(
     try:
         # Tambahkan pagination (offset + limit)
         stmt = (
-            stmt.options(joinedload(Schedule.speaker)).offset(offset).limit(page_size)
+            stmt.options(joinedload(Schedule.speaker))
+            .offset(offset)
+            .limit(page_size)
+            .order_by(Schedule.start.asc())
         )
 
         # Eksekusi query dan ambil hasilnya
@@ -152,10 +155,10 @@ def get_schedule_cms(
     if not all and page is not None and page_size is not None:
         limit = page_size
         offset = (page - 1) * limit
-        stmt = stmt.order_by(Schedule.updated_at.desc()).limit(limit).offset(offset)
+        stmt = stmt.order_by(Schedule.start.asc()).limit(limit).offset(offset)
         num_page = ceil(num_data / limit) if num_data > 0 else 1
     else:
-        stmt = stmt.order_by(Schedule.updated_at.desc())
+        stmt = stmt.order_by(Schedule.start.asc())
 
     results = db.execute(stmt).scalars().all()
 
