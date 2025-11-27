@@ -101,7 +101,18 @@ class User(Base):
     participant_type: Mapped[str] = mapped_column(
         "participant_type", String, nullable=True, default="Non Participant"
     )
-
+    attendance_day_1: Mapped[bool] = mapped_column(
+        "attendance_day_1", Boolean, nullable=True, default=False
+    )
+    attendance_day_1_at = mapped_column(
+        "attendance_day_1_at", DateTime(timezone=True), nullable=True
+    )
+    attendance_day_2: Mapped[bool] = mapped_column(
+        "attendance_day_2", Boolean, nullable=True, default=False
+    )
+    attendance_day_2_at = mapped_column(
+        "attendance_day_2_at", DateTime(timezone=True), nullable=True
+    )
     created_at = mapped_column("created_at", DateTime(timezone=True))
     updated_at = mapped_column("updated_at", DateTime(timezone=True))
     deleted_at = mapped_column("deleted_at", DateTime(timezone=True))

@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Literal, Optional
 from fastapi import Query
 from pydantic import BaseModel
 from uuid import UUID
@@ -11,6 +11,9 @@ class SpeakerQuery(BaseModel):
     page_size: int = Query(1, description="Page Size")
     search: Optional[str] = Query(None, description="Search by speaker name")
     all: Optional[bool] = Query(None, description="Return all speaker if true")
+    order_dir: Literal["asc", "desc"] = Query(
+        "asc", description="Order direction: asc or desc"
+    )
 
 
 class UserInSpeakerResponse(BaseModel):
