@@ -1,5 +1,5 @@
 import datetime
-from zoneinfo import ZoneInfo
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -8,7 +8,7 @@ from core.log import logger
 from models.Payment import Payment
 from models.User import User
 from schemas.checkin import CheckinDayEnum
-
+from settings import TZ
 
 def get_user_data_by_payment_id(db: Session, payment_id: str) -> User | None:
     """Find user data based on Payment ID
@@ -65,17 +65,21 @@ def set_user_checkin_status(
 
     Returns:
         User | None: Updated user or None if not found or error occurred
+        
     """
+    
+    try:
+        tz = ZoneInfo(TZ)
+    except ZoneInfoNotFoundError:
+        logger.error(f"Timezone {TZ} not found. Using UTC instead.")
+        tz = ZoneInfo("UTC")
+        
     try:
         user = db.get(User, user_id)
 
         if not user:
             return None
-        tz = ZoneInfo("UTC")
         now = datetime.datetime.now(tz)
-        logger.info(
-            f"Setting check-in status for user {user_id} on {day} to {status} at {now}"
-        )
         match day:
             case CheckinDayEnum.day1:
                 user.attendance_day_1 = status
@@ -97,3 +101,4 @@ def set_user_checkin_status(
         logger.error(f"Error setting check-in status: {e}")
         db.rollback()
         return None
+
