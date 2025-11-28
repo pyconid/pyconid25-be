@@ -378,7 +378,6 @@ async def update_schedule(
                 BadRequest(message="End time must be after start time")
             )
 
-        update_data = request.model_dump(exclude_unset=True)
         updated_schedule = scheduleRepo.update_schedule(
             db=db,
             schedule=schedule,
