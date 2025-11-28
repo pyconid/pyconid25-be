@@ -66,6 +66,14 @@ MAIL_TLS = str_to_bool(os.environ.get("MAIL_TLS", "False"))
 MAIL_SSL = str_to_bool(os.environ.get("MAIL_SSL", "True"))
 USE_CREDENTIALS = str_to_bool(os.environ.get("USE_CREDENTIALS", "True"))
 
+# Rate Limiting
+RATE_LIMIT_ENABLED = str_to_bool(os.environ.get("RATE_LIMIT_ENABLED", "False"))
+RATE_LIMIT_PER_MINUTE = int(os.environ.get("RATE_LIMIT_PER_MINUTE", "20"))
+RATE_LIMIT_WINDOW = int(os.environ.get("RATE_LIMIT_WINDOW", "60"))
+RATE_LIMIT_EXCLUDED_PATHS = os.environ.get(
+    "RATE_LIMIT_EXCLUDED_PATHS", "/docs,/openapi.json"
+).split(",")
+
 # Mayar Payment Gateway conf
 MAYAR_API_KEY = os.environ.get("MAYAR_API_KEY", "")
 MAYAR_BASE_URL = os.environ.get("MAYAR_BASE_URL", "https://api.mayar.id")
