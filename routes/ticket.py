@@ -1,26 +1,38 @@
 import traceback
+
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import ValidationError
-from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from core.log import logger
 from core.responses import (
     InternalServerError,
+    NotFound,
     Ok,
+    PaymentRequired,
     Unauthorized,
     common_response,
-    NotFound,
 )
 from core.security import get_user_from_token, oauth2_scheme
 from models import get_db_sync
+from models.Payment import PaymentStatus
 from repository import payment as paymentRepo
-from repository.checkin import get_user_data_by_payment_id
+from repository.checkin import (
+    get_user_and_payment_by_payment_id,
+    get_user_data_by_payment_id,
+    set_user_checkin_status,
+)
 from repository.ticket import get_active_tickets
-from schemas.checkin import CheckinUserResponse
+from schemas.checkin import (
+    CheckinUserRequest,
+    CheckinUserResponse,
+    user_model_to_checkin_response,
+)
 from schemas.common import (
     InternalServerErrorResponse,
-    UnauthorizedResponse,
     NotFoundResponse,
+    PaymentRequiredResponse,
+    UnauthorizedResponse,
 )
 from schemas.ticket import (
     MyTicket,
@@ -131,22 +143,22 @@ async def get_my_ticket(
     },
 )
 async def checkin(payment_id: str, db: Session = Depends(get_db_sync)):
+    """Endpoint to get user check-in data based on Payment ID
+
+    Args:
+        payment_id (str): Payment ID
+        db (Session, optional): DB session. Defaults to Depends(get_db_sync).
+
+    Returns:
+        CheckinUserResponse: User check-in data
+    """
     try:
         result = get_user_data_by_payment_id(db, payment_id)
         if result is None:
             return common_response(
                 NotFound(message=f"No user found for payment ID: {payment_id}")
             )
-        response = CheckinUserResponse(
-            id=str(result.id),
-            email=result.email,
-            first_name=result.first_name,
-            last_name=result.last_name,
-            t_shirt_size=result.t_shirt_size,
-            participant_type=result.participant_type,
-            checked_in_day1=result.attendance_day_1,
-            checked_in_day2=result.attendance_day_2,
-        )
+        response = user_model_to_checkin_response(result)
     except ValidationError as ve:
         traceback.print_exc()
         logger.error(f"Validation error in checkin: {ve}")
@@ -164,6 +176,125 @@ async def checkin(payment_id: str, db: Session = Depends(get_db_sync)):
             data={
                 "data": response.model_dump(mode="json"),
                 "message": "Successfully retrieved user checkin data",
+            }
+        )
+    )
+
+
+@router.patch(
+    "/checkin",
+    responses={
+        "200": {"model": CheckinUserResponse},
+        "401": {"model": UnauthorizedResponse},
+        "402": {"model": PaymentRequiredResponse},
+        "404": {"model": NotFoundResponse},
+        "500": {"model": InternalServerErrorResponse},
+    },
+)
+async def checkin_user(
+    request: Request,
+    payload: CheckinUserRequest,
+    db: Session = Depends(get_db_sync),
+    token: str = Depends(oauth2_scheme),
+):
+    logger.info(f"Checkin request received: {payload}")
+    try:
+        checkin_staff_user = get_user_from_token(db=db, token=token)
+        if checkin_staff_user is None:
+            logger.error("Unauthorized check-in attempt")
+            return common_response(Unauthorized(message="Unauthorized"))
+        
+        user_and_payment = get_user_and_payment_by_payment_id(db, payload.payment_id)
+        if user_and_payment is None:
+            return common_response(
+                NotFound(message=f"No user found for payment ID: {payload.payment_id}")
+            )
+        user, payment = user_and_payment
+        if payment.status != PaymentStatus.PAID:
+            return common_response(
+                PaymentRequired(
+                    detail=f"Payment with ID {payload.payment_id} is not paid yet."
+                )
+            )
+        checkin_status = True
+        updated_user = set_user_checkin_status(
+            db=db, user_id=str(user.id), day=payload.day, status=checkin_status
+        )
+
+        if updated_user is None:
+            return common_response(
+                InternalServerError(
+                    error="Failed to process check-in. Please try again or contact support."
+                )
+            )
+    except Exception as e:
+        traceback.print_exc()
+        logger.error(f"Error in checkin_user: {e}")
+        return common_response(
+            InternalServerError(error=f"Internal Server Error: {str(e)}")
+        )
+    response = user_model_to_checkin_response(updated_user)
+    return common_response(
+        Ok(
+            data={
+                "data": response.model_dump(mode="json"),
+                "message": "User check-in successful",
+            }
+        )
+    )
+
+
+@router.patch(
+    "/checkin/reset",
+    responses={
+        "200": {"model": CheckinUserResponse},
+        "401": {"model": UnauthorizedResponse},
+        "402": {"model": PaymentRequiredResponse},
+        "404": {"model": NotFoundResponse},
+        "500": {"model": InternalServerErrorResponse},
+    },
+)
+async def checkin_user_reset(
+    request: Request,
+    payload: CheckinUserRequest,
+    db: Session = Depends(get_db_sync),
+    token: str = Depends(oauth2_scheme),
+):
+    logger.info(f"Checkin Reset request received: {payload}")
+    try:
+        checkin_staff_user = get_user_from_token(db=db, token=token)
+        if checkin_staff_user is None:
+            logger.error("Unauthorized check-in reset attempt")
+            return common_response(Unauthorized(message="Unauthorized"))
+        
+        user= get_user_data_by_payment_id(db, payload.payment_id)
+        if user is None:
+            return common_response(
+                NotFound(message=f"No user found for payment ID: {payload.payment_id}")
+            )
+        checkin_status = False
+        updated_user = set_user_checkin_status(
+            db=db, user_id=str(user.id), day=payload.day, status=checkin_status
+        )
+
+        if updated_user is None:
+            return common_response(
+                InternalServerError(
+                    error="Failed to process check-in reset. Please try again or contact support."
+                )
+            )
+    except Exception as e:
+        traceback.print_exc()
+        logger.error(f"Error in checkin_user_reset: {e}")
+        return common_response(
+            InternalServerError(error=f"Internal Server Error: {str(e)}")
+        )
+    response = user_model_to_checkin_response(updated_user)
+    return common_response(
+        Ok(
+            data={
+                "data": response.model_dump(mode="json"),
+                "message": "Reset user check-in successful",
             }
         )
     )
