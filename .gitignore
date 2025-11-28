@@ -15,3 +15,6 @@ uv.lock
 .ruff_cache
 storage/**
 !storage/.gitkeep
+
+
+.idea/
