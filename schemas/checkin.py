@@ -1,5 +1,6 @@
 from typing import Optional
 from enum import Enum
+from core.log import logger
 from pydantic import BaseModel, EmailStr, Field
 from schemas.user_profile import ParticipantType, TShirtSize
 from models.User import User
@@ -24,13 +25,21 @@ def user_model_to_checkin_response(user: User) -> CheckinUserResponse:
     Returns:
         CheckinUserResponse: CheckinUserResponse schema instance
     """
+    tshirt_size = None
+    participant_type = None
+    try:
+        tshirt_size = TShirtSize(user.t_shirt_size) if user.t_shirt_size else None
+        participant_type = ParticipantType(user.participant_type) if user.participant_type else None
+    except ValueError as e:
+        logger.error(f"Invalid enum value in user model: {e}")
+    
     return CheckinUserResponse(
         id=str(user.id),
         email=user.email,
         first_name=user.first_name,
         last_name=user.last_name,
-        t_shirt_size=user.t_shirt_size if isinstance(user.t_shirt_size, TShirtSize) else None,
-        participant_type=user.participant_type if isinstance(user.participant_type, ParticipantType) else None,
+        t_shirt_size=tshirt_size, 
+        participant_type=participant_type,
         checked_in_day1=user.attendance_day_1,
         checked_in_day2=user.attendance_day_2,
     )
