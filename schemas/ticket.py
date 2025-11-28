@@ -31,7 +31,6 @@ class MyTicketInfo(BaseModel):
 
 
 class MyTicketVoucher(BaseModel):
-    code: str
     value: int
     participant_type: Optional[str] = None
 

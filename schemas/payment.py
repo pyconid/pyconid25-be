@@ -16,6 +16,11 @@ class Voucher(BaseModel):
     participant_type: Optional[str] = None
 
 
+class VoucherInfo(BaseModel):
+    value: int
+    participant_type: Optional[str] = None
+
+
 class User(BaseModel):
     id: str
     first_name: Optional[str]
@@ -49,6 +54,7 @@ class DetailPaymentResponse(BaseModel):
     amount: int
     description: Optional[str] = None
     ticket: Optional[Ticket] = None
+    voucher: Optional[VoucherInfo] = None
 
 
 class PaymentListResponse(BaseModel):

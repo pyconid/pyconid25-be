@@ -96,7 +96,6 @@ async def get_my_ticket(
                 paid_at=payment.paid_at,
                 voucher=(
                     MyTicketVoucher(
-                        code=voucher.code,
                         value=voucher.value,
                         participant_type=voucher.type,
                     )

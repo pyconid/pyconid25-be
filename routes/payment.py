@@ -1,4 +1,5 @@
 import traceback
+from typing import Optional
 from fastapi import APIRouter, Depends, Header
 from sqlalchemy.orm import Session
 
@@ -26,6 +27,7 @@ from schemas.payment import (
     Ticket as TicketSchema,
     User as UserSchema,
     Voucher as VoucherSchema,
+    VoucherInfo,
     VoucherValidateResponse,
 )
 from models.Voucher import Voucher as VoucherModel
@@ -42,6 +44,7 @@ from settings import (
     MAYAR_API_KEY,
     MAYAR_BASE_URL,
     MAYAR_WEBHOOK_SECRET,
+    FRONTEND_BASE_URL,
 )
 from core.log import logger
 
@@ -366,30 +369,50 @@ async def list_payments(
 
         payments = paymentRepo.get_payments_by_user_id(db=db, user_id=str(user.id))
 
-        results = [
-            DetailPaymentResponse(
-                id=str(payment.id),
-                user=UserSchema(
-                    id=str(user.id),
-                    first_name=user.first_name,
-                    last_name=user.last_name,
-                    t_shirt_size=user.t_shirt_size,
-                ),
-                payment_link=payment.payment_link,
-                status=payment.status,
-                created_at=payment.created_at,
-                paid_at=payment.paid_at,
-                closed_at=payment.closed_at,
-                amount=payment.amount,
-                description=payment.description,
-                ticket=TicketSchema(
-                    id=str(payment.ticket.id),
-                    name=payment.ticket.name,
-                    participant_type=payment.ticket.user_participant_type,
-                ),
+        results = []
+
+        for payment in payments:
+            payment_link: Optional[str] = payment.payment_link
+            if payment.status == PaymentStatus.PAID:
+                payment_link = (
+                    f"{FRONTEND_BASE_URL}/auth/payment/{str(payment.id)}"
+                    if FRONTEND_BASE_URL
+                    else None
+                )
+            elif payment.status == PaymentStatus.CLOSED:
+                payment_link = None
+
+            results.append(
+                DetailPaymentResponse(
+                    id=str(payment.id),
+                    user=UserSchema(
+                        id=str(user.id),
+                        first_name=user.first_name,
+                        last_name=user.last_name,
+                        t_shirt_size=user.t_shirt_size,
+                    ),
+                    payment_link=payment_link,
+                    status=payment.status,
+                    created_at=payment.created_at,
+                    paid_at=payment.paid_at,
+                    closed_at=payment.closed_at,
+                    amount=payment.amount,
+                    description=payment.description,
+                    ticket=TicketSchema(
+                        id=str(payment.ticket.id),
+                        name=payment.ticket.name,
+                        participant_type=payment.ticket.user_participant_type,
+                    ),
+                    voucher=(
+                        VoucherInfo(
+                            value=payment.voucher.value,
+                            participant_type=payment.voucher.type,
+                        )
+                        if payment.voucher
+                        else None
+                    ),
+                )
             )
-            for payment in payments
-        ]
 
         return common_response(
             Ok(data=PaymentListResponse(results=results).model_dump(mode="json"))
@@ -484,6 +507,16 @@ async def get_payment_detail(
         except Exception as e:
             logger.error(f"Error fetching payment status from Mayar: {e}")
 
+        payment_link: Optional[str] = payment.payment_link
+        if payment.status == PaymentStatus.PAID:
+            payment_link = (
+                f"{FRONTEND_BASE_URL}/auth/payment/{str(payment.id)}"
+                if FRONTEND_BASE_URL
+                else None
+            )
+        elif payment.status == PaymentStatus.CLOSED:
+            payment_link = None
+
         return common_response(
             Ok(
                 data=DetailPaymentResponse(
@@ -494,7 +527,7 @@ async def get_payment_detail(
                         last_name=user.last_name,
                         t_shirt_size=user.t_shirt_size,
                     ),
-                    payment_link=payment.payment_link,
+                    payment_link=payment_link,
                     status=payment.status,
                     created_at=payment.created_at,
                     paid_at=payment.paid_at,
@@ -505,6 +538,14 @@ async def get_payment_detail(
                         id=str(payment.ticket.id),
                         name=payment.ticket.name,
                         participant_type=payment.ticket.user_participant_type,
+                    ),
+                    voucher=(
+                        VoucherInfo(
+                            value=payment.voucher.value,
+                            participant_type=payment.voucher.type,
+                        )
+                        if payment.voucher
+                        else None
                     ),
                 ).model_dump(mode="json")
             )
