@@ -169,15 +169,16 @@ def create_schedule(
     db: Session,
     title: str,
     speaker_id: Union[UUID, str],
-    room_id: Optional[Union[UUID, str]] = None,
-    schedule_type_id: Optional[Union[UUID, str]] = None,
+    room_id: Union[UUID, str],
+    schedule_type_id: Union[UUID, str],
+    start: datetime,
+    end: datetime,
     description: Optional[str] = None,
     presentation_language: Optional[str] = None,
     slide_language: Optional[str] = None,
     slide_link: Optional[str] = None,
     tags: Optional[List[str]] = None,
-    start: Optional[datetime] = None,
-    end: Optional[datetime] = None,
+    is_commit: bool = True,
 ) -> Schedule:
     schedule = Schedule(
         title=title,
@@ -194,7 +195,8 @@ def create_schedule(
     )
 
     db.add(schedule)
-    db.commit()
+    if is_commit:
+        db.commit()
     db.refresh(schedule)
 
     return schedule
@@ -219,18 +221,43 @@ def get_schedule_by_id(
     return db.execute(stmt).scalar_one_or_none()
 
 
-def update_schedule(db: Session, schedule: Schedule, **kwargs) -> Schedule:
-    for key, value in kwargs.items():
-        if hasattr(schedule, key) and value is not None:
-            setattr(schedule, key, value)
-
+def update_schedule(
+    db: Session,
+    schedule: Schedule,
+    title: str,
+    start: datetime,
+    end: datetime,
+    speaker_id: Union[UUID, str],
+    room_id: Union[UUID, str],
+    schedule_type_id: Union[UUID, str],
+    description: Optional[str] = None,
+    presentation_language: Optional[str] = None,
+    slide_language: Optional[str] = None,
+    slide_link: Optional[str] = None,
+    tags: Optional[List[str]] = None,
+    is_commit: bool = True,
+) -> Schedule:
+    schedule.title = title
+    schedule.speaker_id = speaker_id
+    schedule.room_id = room_id
+    schedule.schedule_type_id = schedule_type_id
+    schedule.description = description
+    schedule.presentation_language = presentation_language
+    schedule.slide_language = slide_language
+    schedule.slide_link = slide_link
+    schedule.tags = tags
+    schedule.start = start
+    schedule.end = end
     schedule.updated_at = datetime.now()
-    db.commit()
+
+    if is_commit:
+        db.commit()
     db.refresh(schedule)
 
     return schedule
 
 
-def delete_schedule(db: Session, schedule: Schedule) -> None:
+def delete_schedule(db: Session, schedule: Schedule, is_commit: bool = True) -> None:
     schedule.deleted_at = datetime.now()
-    db.commit()
+    if is_commit:
+        db.commit()

@@ -43,23 +43,22 @@ class CreateScheduleRequest(BaseModel):
 
 
 class UpdateScheduleRequest(BaseModel):
-    title: Optional[str] = None
-    speaker_id: Optional[UUID] = None
-    room_id: Optional[UUID] = None
-    schedule_type_id: Optional[UUID] = None
+    title: str
+    speaker_id: UUID
+    room_id: UUID
+    schedule_type_id: UUID
     description: Optional[str] = None
     presentation_language: Optional[Language] = None
     slide_language: Optional[Language] = None
     slide_link: Optional[str] = None
     tags: Optional[List[str]] = None
-    start: Optional[datetime] = None
-    end: Optional[datetime] = None
+    start: datetime
+    end: datetime
 
     @model_validator(mode="after")
     def check_dates(self):
-        if self.start and self.end:
-            if self.end < self.start:
-                raise ValueError("End time must be not be less than start time")
+        if self.end < self.start:
+            raise ValueError("End time must be not be less than start time")
         return self
 
 

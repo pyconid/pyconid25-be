@@ -352,35 +352,48 @@ async def update_schedule(
         if not schedule:
             return common_response(NotFound(message="Schedule not found"))
 
-        if request.room_id is not None:
+        if request.room_id != schedule.room_id:
             room = roomRepo.get_room_by_id(db=db, room_id=request.room_id)
             if room is None:
                 return common_response(BadRequest(message="Room not found"))
 
-        if request.schedule_type_id is not None:
+        if request.schedule_type_id != schedule.schedule_type_id:
             schedule_type = scheduleTypeRepo.get_schedule_type_by_id(
                 db=db, schedule_type_id=request.schedule_type_id
             )
             if schedule_type is None:
                 return common_response(BadRequest(message="Schedule type not found"))
 
-        if request.speaker_id is not None:
+        if request.speaker_id != schedule.speaker_id:
             speaker = speakerRepo.get_speaker_by_id(db=db, id=str(request.speaker_id))
             if speaker is None:
                 return common_response(BadRequest(message="Speaker not found"))
 
-        if request.end is not None:
-            start_time = schedule.start
-            if request.start is not None:
-                start_time = request.start
+        start_time = schedule.start
+        if request.start is not None:
+            start_time = request.start
 
-            if request.end < start_time:
-                return common_response(
-                    BadRequest(message="End time must be after start time")
-                )
+        if request.end < start_time:
+            return common_response(
+                BadRequest(message="End time must be after start time")
+            )
 
         update_data = request.model_dump(exclude_unset=True)
-        updated_schedule = scheduleRepo.update_schedule(db, schedule, **update_data)
+        updated_schedule = scheduleRepo.update_schedule(
+            db=db,
+            schedule=schedule,
+            title=request.title,
+            start=request.start,
+            end=request.end,
+            speaker_id=request.speaker_id,
+            room_id=request.room_id,
+            schedule_type_id=request.schedule_type_id,
+            description=request.description,
+            presentation_language=request.presentation_language,
+            slide_language=request.slide_language,
+            slide_link=request.slide_link,
+            tags=request.tags,
+        )
 
         return common_response(
             Ok(

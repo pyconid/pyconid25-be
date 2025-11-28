@@ -179,7 +179,15 @@ class TestSchedule(IsolatedAsyncioTestCase):
 
         payload = {
             "title": "Updated Title",
+            "room_id": str(self.room.id),
+            "speaker_id": str(self.speaker.id),
+            "schedule_type_id": str(self.schedule_type.id),
             "description": "Updated description",
+            "presentation_language": "English",
+            "slide_language": "English",
+            "tags": ["python", "update"],
+            "start": str(start_time),
+            "end": str(end_time),
         }
 
         # When
@@ -202,7 +210,16 @@ class TestSchedule(IsolatedAsyncioTestCase):
         client = TestClient(app)
 
         non_existent_id = str(uuid.uuid4())
-        payload = {"title": "Updated Title"}
+        start_time = datetime.now() + timedelta(hours=1)
+        end_time = start_time + timedelta(hours=1)
+        payload = {
+            "title": "Updated Title",
+            "room_id": str(self.room.id),
+            "speaker_id": str(self.speaker.id),
+            "schedule_type_id": str(self.schedule_type.id),
+            "start": str(start_time),
+            "end": str(end_time),
+        }
 
         # When
         response = client.put(
@@ -210,6 +227,7 @@ class TestSchedule(IsolatedAsyncioTestCase):
             json=payload,
             headers={"Authorization": f"Bearer {token}"},
         )
+        print(response.json())
 
         # Expect
         self.assertEqual(response.status_code, 404)
