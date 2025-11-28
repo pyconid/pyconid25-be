@@ -177,7 +177,9 @@ class TestCheckIn(IsolatedAsyncioTestCase):
         response = self.client.get(f"/ticket/checkin/{self.test_payment.id}")
         self.assertEqual(response.status_code, 200)
         data = response.json()
-        self.assertEqual(data["data"]["participant_type"], ParticipantType.IN_PERSON.value)
+        self.assertEqual(
+            data["data"]["participant_type"], ParticipantType.IN_PERSON.value
+        )
 
     def test_get_user_data_response_structure(self):
         """Test that response contains all required fields"""

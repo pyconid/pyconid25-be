@@ -1,4 +1,4 @@
-import datetime 
+import datetime
 from zoneinfo import ZoneInfo
 
 from sqlalchemy import select
@@ -8,6 +8,7 @@ from core.log import logger
 from models.Payment import Payment
 from models.User import User
 from schemas.checkin import CheckinDayEnum
+
 
 def get_user_data_by_payment_id(db: Session, payment_id: str) -> User | None:
     """Find user data based on Payment ID
@@ -27,7 +28,9 @@ def get_user_data_by_payment_id(db: Session, payment_id: str) -> User | None:
     return db.execute(query).scalar_one_or_none()
 
 
-def get_user_and_payment_by_payment_id(db: Session, payment_id: str) -> tuple[User, Payment] | None:
+def get_user_and_payment_by_payment_id(
+    db: Session, payment_id: str
+) -> tuple[User, Payment] | None:
     """Find user and payment data by Payment ID
 
     Args:
@@ -50,32 +53,34 @@ def get_user_and_payment_by_payment_id(db: Session, payment_id: str) -> tuple[Us
 
 
 def set_user_checkin_status(
-    db: Session, user_id: str, day: CheckinDayEnum, status: bool, updated_by: str 
+    db: Session, user_id: str, day: CheckinDayEnum, status: bool, updated_by: str
 ) -> User | None:
     """Set user check-in status for a specific day
 
     Args:
-        db (Session): Database session 
+        db (Session): Database session
         user_id (str): User ID
         day (CheckinDayEnum): Day for check-in (day1 or day2)
         status (bool): Check-in status to set
-        
+
     Returns:
         User | None: Updated user or None if not found or error occurred
     """
     try:
         user = db.get(User, user_id)
-        
+
         if not user:
             return None
         tz = ZoneInfo("UTC")
         now = datetime.datetime.now(tz)
-        logger.info(f"Setting check-in status for user {user_id} on {day} to {status} at {now}")
+        logger.info(
+            f"Setting check-in status for user {user_id} on {day} to {status} at {now}"
+        )
         match day:
             case CheckinDayEnum.day1:
                 user.attendance_day_1 = status
                 user.attendance_day_1_updated_by = updated_by
-                
+
                 if status:
                     user.attendance_day_1_at = now
             case CheckinDayEnum.day2:
@@ -92,5 +97,3 @@ def set_user_checkin_status(
         logger.error(f"Error setting check-in status: {e}")
         db.rollback()
         return None
-    
-    

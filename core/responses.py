@@ -157,8 +157,8 @@ class NotFound(HttpResponseAbstract):
             return JSONResponse(content={"message": self.message}, status_code=404)
         else:
             return JSONResponse(content=self.custom_response, status_code=404)
-        
-        
+
+
 class PaymentRequired(HttpResponseAbstract):
     def __init__(
         self, detail: str = "Payment Required", custom_response: Optional[Any] = None

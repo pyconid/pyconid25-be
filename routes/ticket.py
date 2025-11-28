@@ -203,7 +203,7 @@ async def checkin_user(
         if checkin_staff_user is None:
             logger.error("Unauthorized check-in attempt")
             return common_response(Unauthorized(message="Unauthorized"))
-        
+
         user_and_payment = get_user_and_payment_by_payment_id(db, payload.payment_id)
         if user_and_payment is None:
             return common_response(
@@ -218,7 +218,11 @@ async def checkin_user(
             )
         checkin_status = True
         updated_user = set_user_checkin_status(
-            db=db, user_id=str(user.id), day=payload.day, status=checkin_status, updated_by=str(checkin_staff_user.id)
+            db=db,
+            user_id=str(user.id),
+            day=payload.day,
+            status=checkin_status,
+            updated_by=str(checkin_staff_user.id),
         )
 
         if updated_user is None:
@@ -266,15 +270,19 @@ async def checkin_user_reset(
         if checkin_staff_user is None:
             logger.error("Unauthorized check-in reset attempt")
             return common_response(Unauthorized(message="Unauthorized"))
-        
-        user= get_user_data_by_payment_id(db, payload.payment_id)
+
+        user = get_user_data_by_payment_id(db, payload.payment_id)
         if user is None:
             return common_response(
                 NotFound(message=f"No user found for payment ID: {payload.payment_id}")
             )
         checkin_status = False
         updated_user = set_user_checkin_status(
-            db=db, user_id=str(user.id), day=payload.day, status=checkin_status, updated_by=str(checkin_staff_user.id)
+            db=db,
+            user_id=str(user.id),
+            day=payload.day,
+            status=checkin_status,
+            updated_by=str(checkin_staff_user.id),
         )
 
         if updated_user is None:
