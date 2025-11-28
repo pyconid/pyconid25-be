@@ -49,5 +49,9 @@ class NotFoundResponse(BaseModel):
     detail: str = "Not found"
 
 
+class PaymentRequiredResponse(BaseModel):
+    detail: str = "Payment required"
+
+
 class InternalServerErrorResponse(BaseModel):
     detail: str
