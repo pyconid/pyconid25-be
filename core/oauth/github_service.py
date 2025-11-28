@@ -82,4 +82,7 @@ class OAuthGithubService(BaseOAuthService):
         user_data.update(
             {"github_id": provider_id, "github_username": user_info.get("username")}
         )
+        if user_info.get("email"):
+            user_data["email"] = user_info.get("email")
+
         return user_data

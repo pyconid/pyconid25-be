@@ -13,3 +13,5 @@ uv.lock
 # Vscode
 .vscode
 .ruff_cache
+storage/**
+!storage/.gitkeep

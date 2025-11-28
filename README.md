@@ -10,6 +10,8 @@ BE for PyCon ID 2025 website
 - aktifkan python virtual environtment `source env/bin/activate`
 - install depedency ke virtual environtment `pip install -r requirements.txt`
 - copy file .env.example menjadi .env `cp .env.example .env` lalu isi berdasarkan konfigurasi postgresql
+- jika belum ada atau update data lokasi (negara, provinsi, kota) jalankan `python cli.py download-location-data`
+- seeder initial data `python cli.py initial-data`
 - migrasi tabel menggunakan alembic `alembic upgrade head`
 - jalankan aplikasi `uvicorn main:app --reload`
 - buka openapi doc di http://localhost:8000/docs
@@ -29,6 +31,31 @@ BE for PyCon ID 2025 website
 - run satu testing pada class tertentu `pytest ./{path}/{to}/{folder}/{file}.py::{nama class}::{nama fungsi}`
 - run verbose (lihat print) `pytest . -s`
 
+## Data Location
+Untuk data lokasi (negara, provinsi, kota) diambil dari [countries-states-cities-database](https://github.com/dr5hn/countries-states-cities-database).
+
+Jalankan perintah berikut untuk mendownload data lokasi terbaru:
+```bash
+python cli.py download-location-data
+```
+
+Untuk menghapus data lokasi:
+```bash
+python cli.py clear-location-data
+```
+
+Untuk mengimpor data lokasi ke database:
+```bash
+python cli.py import-location-data
+```
+
+atau bisa gunakan initial-data yang sudah include import data lokasi:
+```bash
+python cli.py initial-data
+```
+
+untuk cities.json di github asalnya sudah mengcompress .json ke .json.gz (tinggal di uncompress)
+
 ## Kontribusi
 untuk tata cara kontribusi bisa dilihat di [CONTRIBUTING.md](./CONTRIBUTING.md) dan diharapkan kontributor memematuhi [Code of Conduct](./CODE%20OF%20CONDUCT.md) yang berlaku.
 
@@ -46,9 +73,9 @@ Jika ada muncul kesalahan seperti ini ketika menjalankan alembic untuk pertama k
 sqlalchemy.exc.ProgrammingError: (psycopg.errors.InsufficientPrivilege) permission denied for schema public
 LINE 2: CREATE TABLE public.alembic_version (
                      ^
-[SQL: 
+[SQL:
 CREATE TABLE public.alembic_version (
-        version_num VARCHAR(32) NOT NULL, 
+        version_num VARCHAR(32) NOT NULL,
         CONSTRAINT alembic_version_pkc PRIMARY KEY (version_num)
 )
 ```
@@ -72,3 +99,4 @@ SELECT has_schema_privilege('public', 'CREATE');`
 ```
 
 Luarannya: `t` (true) jika sudah benar. Setelah ini dapat menjalankan alembic kembali.
+

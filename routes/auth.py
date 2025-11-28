@@ -90,7 +90,15 @@ async def me(db: Session = Depends(get_db_sync), token: str = Depends(oauth2_sch
     if user is None:
         return common_response(Unauthorized(message="Invalid Credentials"))
 
-    return common_response(Ok(data={"id": str(user.id), "username": user.username}))
+    return common_response(
+        Ok(
+            data={
+                "id": str(user.id),
+                "username": user.username,
+                "participant_type": user.participant_type,
+            }
+        )
+    )
 
 
 @router.post(

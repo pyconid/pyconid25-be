@@ -26,7 +26,7 @@ ENVIRONTMENT = os.environ.get("ENVIRONTMENT")
 
 # JWT conf
 JWT_PREFIX = os.environ.get("JWT_PREFIX", "Bearer")
-SECRET_KEY = os.environ.get("SECRET_KEY")
+SECRET_KEY = os.environ.get("SECRET_KEY", "pyconid25_secret")
 ALGORITHM = os.environ.get("ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = os.environ.get("ACCESS_TOKEN_EXPIRE_MINUTES", 30)
 if ACCESS_TOKEN_EXPIRE_MINUTES is not None:
@@ -73,3 +73,15 @@ RATE_LIMIT_WINDOW = int(os.environ.get("RATE_LIMIT_WINDOW", "60"))
 RATE_LIMIT_EXCLUDED_PATHS = os.environ.get(
     "RATE_LIMIT_EXCLUDED_PATHS", "/docs,/openapi.json"
 ).split(",")
+
+# Mayar Payment Gateway conf
+MAYAR_API_KEY = os.environ.get("MAYAR_API_KEY", "")
+MAYAR_BASE_URL = os.environ.get("MAYAR_BASE_URL", "https://api.mayar.id")
+MAYAR_WEBHOOK_SECRET = os.environ.get("MAYAR_WEBHOOK_SECRET", "")
+MAYAR_PAYMENT_EXPIRE_HOURS = int(
+    os.environ.get("MAYAR_PAYMENT_EXPIRE_HOURS", default="1")
+)
+
+# File upload
+FILE_STORAGE_PATH = os.environ.get("FILE_STORAGE_PATH", "./storage")
+MAX_FILE_SIZE_MB = int(os.environ.get("MAX_FILE_SIZE_MB", "5"))

@@ -3,24 +3,71 @@ from datetime import date
 from enum import Enum
 from typing import Optional, List, Any
 
-from pydantic import BaseModel, EmailStr, Field, HttpUrl, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    EmailStr,
+    Field,
+    HttpUrl,
+    field_validator,
+    model_validator,
+)
 
-# --- Enums for Dropdown Fields ---
-# Menggunakan Enum memastikan data yang masuk adalah salah satu dari opsi yang valid.
+
+class DetailSearchUserProfile(BaseModel):
+    id: str
+    username: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    email: Optional[str] = None
+
+
+class SearchUserProfileResponse(BaseModel):
+    results: List[DetailSearchUserProfile]
 
 
 class IndustryCategory(str, Enum):
-    TECHNOLOGY = "Technology"
-    FINANCE = "Finance"
-    HEALTHCARE = "Healthcare"
+    CAPITAL_GOODS = "Capital Goods"
+    COMMERCIAL = "Commercial & Professional Services"
+    CONSUMER_GOODS = "Consumer Goods"
+    CONSUMER_SERVICES = "Consumser Services"
     EDUCATION = "Education"
+    ENERGY = "Energy"
+    FINANCE = "Financial Service"
+    GOVERNMENT = "Government"
+    HEALTHCARE = "Healthcare"
+    INSURANCE = "Insurance"
+    MEDIA = "Media & Entertainment"
+    REAL_ESTATE = "Real Estate"
+    HARDWARE = "Semiconductor & Hardware Components"
+    TECHNOLOGY = "Software & Technolgy Services"
+    TELECOMMUNICATION = "Telecommunication Services"
+    TRANSPORTATION = "Transportation"
+    UTILITIES = "Utilities"
+    OTHERS = "Others"
 
 
 class JobCategory(str, Enum):
     TECH_SPECIALIST = "Tech - Specialist"
-    MANAGEMENT = "Management"
-    DESIGN = "Design"
-    MARKETING = "Marketing"
+    TECH_MANAGING = "Tech - Managing"
+    NON_TECH = "Non Tech"
+    TEACHER_LECTURER = "Teacher/Lecturer"
+    STUDENT = "Student"
+    ENTERPRENEUR = "Enterpreneur"
+    OTHER = "Other"
+
+
+class ParticipantType(str, Enum):
+    NON_PARTICIPANT = "Non Participant"
+    IN_PERSON = "In Person Participant"
+    ONLINE = "Online Participant"
+    KEYNOTE_SPEAKER = "Keynote Speaker"
+    SPEAKER = "Speaker"
+    ORGANIZER = "Organizer"
+    VOLUNTEER = "Volunteer"
+    SPONSOR = "Sponsor"
+    COMMUNITY = "Community"
+    PATRON = "Patron"
 
 
 class TShirtSize(str, Enum):
@@ -29,21 +76,36 @@ class TShirtSize(str, Enum):
     L = "L"
     XL = "XL"
     XXL = "XXL"
+    XXXL = "XXXL"
+    XXXXL = "4XL"
 
 
 class Gender(str, Enum):
     MALE = "Male"
     FEMALE = "Female"
+    OTHER = "Prefer Not To Say"
 
 
 class LookingForOption(str, Enum):
     OPEN_OPPORTUNITIES = "Open Opportunities"
+    CLOSE_OPPORTUNITIES = "Close Opportunities"
     NETWORKING = "Networking"
     HIRING = "Hiring"
-    MENTORSHIP = "Mentorship"
 
 
-# --- Main Pydantic Model For DB---
+class CountryReference(BaseModel):
+    id: int
+    name: str
+
+
+class StateReference(BaseModel):
+    id: int
+    name: str
+
+
+class CityReference(BaseModel):
+    id: int
+    name: str
 
 
 class UserProfileBase(BaseModel):
@@ -104,27 +166,43 @@ class UserProfileUpdateBase(UserProfileBase):
 class UserProfilePublic(UserProfileBase):
     """Model untuk data publik yang bisa dilihat semua orang."""
 
-    profile_picture: HttpUrl | None
+    model_config = ConfigDict(from_attributes=True)
+
+    profile_picture: str | None
     first_name: str | None
     last_name: str | None
     job_category: JobCategory | None
     job_title: str | None
-    country: str | None
+    country: Optional[CountryReference] = None
     bio: str | None
     participant_type: str | None
+    share_my_email_and_phone_number: Optional[bool] = False
+    share_my_job_and_company: Optional[bool] = False
+    share_my_location: Optional[bool] = False
+    share_my_interest: Optional[bool] = False
+    share_my_public_social_media: Optional[bool] = False
     coc_acknowledged: Optional[bool] = False
     terms_agreed: Optional[bool] = False
     privacy_agreed: Optional[bool] = False
 
-    class Config:
-        # Konfigurasi agar model dapat digunakan dengan ORM
-        from_attributes = True
+    @model_validator(mode="before")
+    @classmethod
+    def extract_relationships(cls, data: Any) -> Any:
+        if hasattr(data, "__dict__"):
+            result = {k: v for k, v in data.__dict__.items() if not k.startswith("_")}
+
+            if hasattr(data, "country") and data.country:
+                result["country"] = {"id": data.country.id, "name": data.country.name}
+
+            return result
+        return data
 
 
 class UserProfilePrivate(UserProfilePublic):
     """Model untuk data privat yang hanya bisa dilihat oleh user itu sendiri."""
 
     """Berisi semua field umum yang diisi oleh user dari form."""
+    model_config = ConfigDict(from_attributes=True)
 
     email: EmailStr | None
 
@@ -140,9 +218,9 @@ class UserProfilePrivate(UserProfilePublic):
     phone: str | None
 
     # Location
-    state: str | None
-    city: str | None
-    zip_code: str | None
+    state: Optional[StateReference] = None
+    city: Optional[CityReference] = None
+    zip_code: Optional[str] = None
     address: str | None
 
     # Interests and Expertise
@@ -158,9 +236,22 @@ class UserProfilePrivate(UserProfilePublic):
     twitter_username: str | None
     instagram_username: str | None
 
-    class Config:
-        # Konfigurasi agar model dapat digunakan dengan ORM
-        from_attributes = True
+    @model_validator(mode="before")
+    @classmethod
+    def extract_relationships(cls, data: Any) -> Any:
+        if hasattr(data, "__dict__"):
+            result = {k: v for k, v in data.__dict__.items() if not k.startswith("_")}
+
+            # Add nested objects
+            if hasattr(data, "country") and data.country:
+                result["country"] = {"id": data.country.id, "name": data.country.name}
+            if hasattr(data, "state") and data.state:
+                result["state"] = {"id": data.state.id, "name": data.state.name}
+            if hasattr(data, "city") and data.city:
+                result["city"] = {"id": data.city.id, "name": data.city.name}
+
+            return result
+        return data
 
 
 class UserProfileCreate(UserProfileUpdateBase):
@@ -172,7 +263,10 @@ class UserProfileCreate(UserProfileUpdateBase):
     last_name: str = Field(
         ..., min_length=1, max_length=50, description="User's last name."
     )
-    email: Optional[EmailStr] = Field(None, description="User's email address.")
+    # email: Optional[EmailStr] = Field(None, description="User's email address.")
+    share_my_email_and_phone_number: Optional[bool] = Field(
+        None, description="Allow sharing email and phone number."
+    )
     bio: str = Field(
         ...,
         min_length=10,
@@ -187,6 +281,9 @@ class UserProfileCreate(UserProfileUpdateBase):
     )
     job_category: JobCategory = Field(..., description="Category of the user's job.")
     job_title: str = Field(..., max_length=100, description="User's job title.")
+    share_my_job_and_company: Optional[bool] = Field(
+        None, description="Allow sharing job and company information."
+    )
     experience: Optional[int] = Field(
         None, ge=0, description="Years of professional experience."
     )
@@ -202,17 +299,23 @@ class UserProfileCreate(UserProfileUpdateBase):
         "Non Participant", description="Type of participant."
     )
     # Location
-    # Di-handle dengan API, tapi tetap string
-    country: str = Field(..., description="User's country.")
-    state: Optional[str] = Field(None, description="User's state/province.")
-    city: Optional[str] = Field(None, description="User's city.")
+    # Di-handle dengan API menggunakan ID dari dropdown
+    country_id: int = Field(..., description="User's country ID.")
+    state_id: Optional[int] = Field(None, description="User's state/province ID.")
+    city_id: Optional[int] = Field(None, description="User's city ID.")
     zip_code: Optional[str] = Field(
         None, max_length=10, description="Postal or zip code."
     )
     address: Optional[str] = Field(None, max_length=255, description="Full address.")
+    share_my_location: Optional[bool] = Field(
+        None, description="Allow sharing location information."
+    )
 
     # Interests and Expertise
     interest: Optional[List[str]] = Field(None, description="List of user's interests.")
+    share_my_interest: Optional[bool] = Field(
+        None, description="Allow sharing interests."
+    )
     looking_for: Optional[LookingForOption] = None
     expertise: Optional[List[str]] = Field(
         None, description="List of skills user is offering or searching for."
@@ -225,6 +328,9 @@ class UserProfileCreate(UserProfileUpdateBase):
     linkedin_username: Optional[str] = None
     twitter_username: Optional[str] = None
     instagram_username: Optional[str] = None
+    share_my_public_social_media: Optional[bool] = Field(
+        None, description="Allow sharing social media profiles."
+    )
 
     # Agreements
     coc_acknowledged: bool = Field(..., description="Code of Conduct acknowledgement.")
@@ -239,15 +345,15 @@ class UserProfileDB(UserProfileCreate):
     """
 
     # Profile Info
-    profile_picture: HttpUrl = Field(..., description="URL to the profile picture.")
+    profile_picture: Optional[str] = Field(
+        None, description="URL to the profile picture."
+    )
 
 
 class UserProfileEditSuccessResponse(UserProfileDB):
-    class Config:
-        # Konfigurasi agar model dapat digunakan dengan ORM
-        from_attributes = True
-        # Membuat contoh data untuk dokumentasi API
-        json_schema_extra = {
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_schema_extra={
             "example": {
                 "first_name": "string",
                 "last_name": "string",
@@ -263,9 +369,9 @@ class UserProfileEditSuccessResponse(UserProfileDB):
                 "date_of_birth": "2025-09-29",
                 "phone": "+61",
                 "participant_type": "Non Participant",
-                "country": "ii",
-                "state": "string",
-                "city": "string",
+                "country_id": 102,
+                "state_id": 1836,
+                "city_id": 38932,
                 "zip_code": "string",
                 "address": "string",
                 "interest": ["string", "masokk pa eko"],
@@ -282,7 +388,8 @@ class UserProfileEditSuccessResponse(UserProfileDB):
                 "privacy_agreed": True,
                 "profile_picture": "https://example.com/files/roti.jpeg",
             }
-        }
+        },
+    )
 
 
 # --- Contoh Penggunaan ---
@@ -294,7 +401,7 @@ if __name__ == "__main__":
         "last_name": "Wijaya",
         "email": "citra.w@email.com",
         "bio": "A creative designer focused on user experience and interface design.",
-        "job_category": "Design",
+        "job_category": "Tech - Specialist",
         "job_title": "UI/UX Designer",
         "country": "Indonesia",
         "interest": "figma, design thinking, user research",  # Akan diubah jadi list
@@ -322,8 +429,8 @@ if __name__ == "__main__":
         "last_name": "Pratama",
         "email": "andi@.com",  # Email tidak valid
         "bio": "Too short",  # Bio terlalu pendek (min_length=10)
-        "job_category": "Tech - Specialist",
-        "job_title": "Developer",
+        "job_category": "Tech - Managing",
+        "job_title": "Developer Manager",
         "country": "Indonesia",
         "phone": "081234567890",  # Format telepon salah
         "github_username": "https://github.com/andipratama",  # Seharusnya username saja
@@ -337,3 +444,20 @@ if __name__ == "__main__":
     except Exception as e:
         print("❌ Gagal validasi data tidak valid (sesuai harapan):")
         print(e)
+
+
+class EnumDropdownItem(BaseModel):
+    value: str
+    label: str
+
+
+class IndustryCategoryDropdownResponse(BaseModel):
+    results: List[EnumDropdownItem]
+
+
+class JobCategoryDropdownResponse(BaseModel):
+    results: List[EnumDropdownItem]
+
+
+class ParticipantTypeDropdownResponse(BaseModel):
+    results: List[EnumDropdownItem]

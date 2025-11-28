@@ -1,5 +1,10 @@
 from sqlalchemy import create_engine, MetaData
-from sqlalchemy.orm import sessionmaker, DeclarativeBase, Session as SqlalchemySession
+from sqlalchemy.orm import (
+    sessionmaker,
+    DeclarativeBase,
+    scoped_session,
+    Session as SqlalchemySession,
+)
 
 
 from settings import (
@@ -18,6 +23,7 @@ engine = create_engine(
     pool_timeout=300,
 )
 db = sessionmaker(engine, future=True)
+factory_session = scoped_session(db)
 
 
 def get_db_sync():
@@ -46,9 +52,17 @@ class Base(DeclarativeBase):
 
 
 # define all model for alembic migration
+from models.Country import Country  # NOQA
+from models.State import State  # NOQA
+from models.City import City  # NOQA
 from models.User import User  # NOQA
 from models.Token import Token  # NOQA
 from models.RefreshToken import RefreshToken  # NOQA
 from models.Ticket import Ticket  # NOQA
 from models.EmailVerification import EmailVerification  # NOQA
 from models.ResetPassword import ResetPassword  # NOQA
+from models.Payment import Payment  # NOQA
+from models.Schedule import Schedule  # NOQA
+from models.Speaker import Speaker  # NOQA
+from models.Voucher import Voucher  # NOQA
+from models.SpeakerType import SpeakerType  # NOQA
