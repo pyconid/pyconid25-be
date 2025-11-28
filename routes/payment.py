@@ -411,6 +411,11 @@ async def list_payments(
                         if payment.voucher
                         else None
                     ),
+                    participant_type=(
+                        payment.voucher.type
+                        if payment.voucher and payment.voucher.type
+                        else payment.ticket.user_participant_type
+                    ),
                 )
             )
 
@@ -546,6 +551,11 @@ async def get_payment_detail(
                         )
                         if payment.voucher
                         else None
+                    ),
+                    participant_type=(
+                        payment.voucher.type
+                        if payment.voucher and payment.voucher.type
+                        else payment.ticket.user_participant_type
                     ),
                 ).model_dump(mode="json")
             )

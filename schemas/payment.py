@@ -55,6 +55,7 @@ class DetailPaymentResponse(BaseModel):
     description: Optional[str] = None
     ticket: Optional[Ticket] = None
     voucher: Optional[VoucherInfo] = None
+    participant_type: Optional[str] = None
 
 
 class PaymentListResponse(BaseModel):
