@@ -9,8 +9,6 @@ from models.Payment import Payment
 from models.User import User
 from schemas.checkin import CheckinDayEnum
 
-from settings import TZ
-
 def get_user_data_by_payment_id(db: Session, payment_id: str) -> User | None:
     """Find user data based on Payment ID
 
@@ -52,7 +50,7 @@ def get_user_and_payment_by_payment_id(db: Session, payment_id: str) -> tuple[Us
 
 
 def set_user_checkin_status(
-    db: Session, user_id: str, day: CheckinDayEnum, status: bool
+    db: Session, user_id: str, day: CheckinDayEnum, status: bool, updated_by: str 
 ) -> User | None:
     """Set user check-in status for a specific day
 
@@ -76,10 +74,13 @@ def set_user_checkin_status(
         match day:
             case CheckinDayEnum.day1:
                 user.attendance_day_1 = status
+                user.attendance_day_1_updated_by = updated_by
+                
                 if status:
                     user.attendance_day_1_at = now
             case CheckinDayEnum.day2:
                 user.attendance_day_2 = status
+                user.attendance_day_2_updated_by = updated_by
                 if status:
                     user.attendance_day_2_at = now
 

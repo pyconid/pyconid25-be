@@ -218,7 +218,7 @@ async def checkin_user(
             )
         checkin_status = True
         updated_user = set_user_checkin_status(
-            db=db, user_id=str(user.id), day=payload.day, status=checkin_status
+            db=db, user_id=str(user.id), day=payload.day, status=checkin_status, updated_by=str(checkin_staff_user.id)
         )
 
         if updated_user is None:
@@ -274,7 +274,7 @@ async def checkin_user_reset(
             )
         checkin_status = False
         updated_user = set_user_checkin_status(
-            db=db, user_id=str(user.id), day=payload.day, status=checkin_status
+            db=db, user_id=str(user.id), day=payload.day, status=checkin_status, updated_by=str(checkin_staff_user.id)
         )
 
         if updated_user is None:
