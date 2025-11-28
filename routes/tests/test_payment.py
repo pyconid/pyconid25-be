@@ -1,3 +1,4 @@
+import json
 from unittest.mock import patch, MagicMock, AsyncMock
 import alembic.config
 from unittest import IsolatedAsyncioTestCase
@@ -74,6 +75,17 @@ class TestPayment(IsolatedAsyncioTestCase):
             description="Test ticket for payment",
         )
         self.db.add(self.test_ticket)
+        self.db.commit()
+
+        # Create test voucher
+        self.test_voucher = Voucher(
+            code="TESTVOUCHER100K",
+            value=100000,
+            quota=10,
+            is_active=True,
+            type="Speaker",
+        )
+        self.db.add(self.test_voucher)
         self.db.commit()
 
         app.dependency_overrides[get_db_sync] = get_db_sync_for_test(db=self.db)
@@ -271,6 +283,18 @@ class TestPayment(IsolatedAsyncioTestCase):
             mayar_id="mayar-id-2",
             mayar_transaction_id="mayar-tx-2",
         )
+        paymentRepo.create_payment(
+            db=self.db,
+            user_id=str(self.test_user.id),
+            ticket_id=str(self.test_ticket.id),
+            payment_link="https://mayar.id/pay/link2",
+            amount=500000,
+            description="Payment 2",
+            status=PaymentStatus.PAID,
+            mayar_id="mayar-id-2",
+            mayar_transaction_id="mayar-tx-2",
+            voucher_id=self.test_voucher.id,
+        )
 
         self.db.commit()
 
@@ -278,11 +302,12 @@ class TestPayment(IsolatedAsyncioTestCase):
             "/payment/",
             headers={"Authorization": f"Bearer {self.test_token}"},
         )
+        print(json.dumps(response.json(), indent=2))
 
         self.assertEqual(response.status_code, 200)
         data = response.json()
         self.assertIn("results", data)
-        self.assertEqual(len(data["results"]), 2)
+        self.assertEqual(len(data["results"]), 3)
         self.assertTrue(
             any(p["status"] == PaymentStatus.UNPAID.value for p in data["results"])
         )

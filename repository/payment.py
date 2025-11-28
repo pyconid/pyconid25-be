@@ -58,7 +58,7 @@ def get_payments_by_user_id(
 ) -> List[Payment]:
     stmt = (
         select(Payment)
-        .options(joinedload(Payment.ticket))
+        .options(joinedload(Payment.ticket), joinedload(Payment.voucher))
         .where(Payment.user_id == user_id)
         .order_by(Payment.created_at.desc())
     )

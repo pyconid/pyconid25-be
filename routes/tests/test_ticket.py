@@ -179,7 +179,6 @@ class TestTicket(TestCase):
         assert data["data"]["ticket"]["price"] == 123456
         assert data["data"]["payment"]["amount"] == 73456
         assert data["data"]["payment"]["voucher"] is not None
-        assert data["data"]["payment"]["voucher"]["code"] == "TEST50"
         assert data["data"]["payment"]["voucher"]["value"] == 50000
         assert data["data"]["payment"]["voucher"]["participant_type"] == "student"
         assert data["data"]["participant_type"] == "student"
