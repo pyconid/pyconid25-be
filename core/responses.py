@@ -157,6 +157,34 @@ class NotFound(HttpResponseAbstract):
             return JSONResponse(content={"message": self.message}, status_code=404)
         else:
             return JSONResponse(content=self.custom_response, status_code=404)
+        
+        
+class PaymentRequired(HttpResponseAbstract):
+    def __init__(
+        self, detail: str = "Payment Required", custom_response: Optional[Any] = None
+    ) -> None:
+        """
+        custom_response: override default json response
+        default json response:
+        json:{
+            'message': 'Not Found'
+        }
+        status_code: 402
+        """
+        self.custom_response = None
+        if custom_response is not None:
+            self.custom_response = custom_response
+        else:
+            self.detail = detail
+
+    def response(self) -> JSONResponse:
+        """
+        parse class to JSONReponse
+        """
+        if self.custom_response is None:
+            return JSONResponse(content={"message": self.detail}, status_code=402)
+        else:
+            return JSONResponse(content=self.custom_response, status_code=402)
 
 
 class InternalServerError(HttpResponseAbstract):
@@ -200,6 +228,8 @@ def handle_http_exception(e: HTTPException) -> JSONResponse:
         return common_response(BadRequest(message=e.detail))
     elif e.status_code == 401:
         return common_response(Unauthorized(message=e.detail))
+    elif e.status_code == 402:
+        return common_response(PaymentRequired(detail=e.detail))
     elif e.status_code == 403:
         return common_response(Forbidden(custom_response={"message": e.detail}))
     elif e.status_code == 404:
