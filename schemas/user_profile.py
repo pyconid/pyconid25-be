@@ -168,7 +168,7 @@ class UserProfilePublic(UserProfileBase):
 
     model_config = ConfigDict(from_attributes=True)
 
-    profile_picture: HttpUrl | None
+    profile_picture: str | None
     first_name: str | None
     last_name: str | None
     job_category: JobCategory | None
