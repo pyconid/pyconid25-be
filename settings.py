@@ -82,6 +82,17 @@ MAYAR_PAYMENT_EXPIRE_HOURS = int(
     os.environ.get("MAYAR_PAYMENT_EXPIRE_HOURS", default="1")
 )
 
+# Mux Streaming conf
+MUX_TOKEN_ID = os.environ.get("MUX_TOKEN_ID", "")
+MUX_TOKEN_SECRET = os.environ.get("MUX_TOKEN_SECRET", "")
+MUX_WEBHOOK_SECRET = os.environ.get("MUX_WEBHOOK_SECRET", "")
+MUX_SIGNING_KEY_ID = os.environ.get("MUX_SIGNING_KEY_ID", "")
+# Base64-encoded private key from Mux Signing Keys
+MUX_SIGNING_KEY_PRIVATE = os.environ.get("MUX_SIGNING_KEY_PRIVATE", "")
+STREAM_TOKEN_EXPIRE_MINUTES = int(
+    os.environ.get("STREAM_TOKEN_EXPIRE_MINUTES", default="15")
+)
+
 # File upload
 FILE_STORAGE_PATH = os.environ.get("FILE_STORAGE_PATH", "./storage")
 MAX_FILE_SIZE_MB = int(os.environ.get("MAX_FILE_SIZE_MB", "5"))

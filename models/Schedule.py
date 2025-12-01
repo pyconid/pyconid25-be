@@ -1,8 +1,10 @@
+from typing import List
 import datetime
 import uuid
 from models import Base
 from sqlalchemy import UUID, DateTime, ForeignKey, String
 from sqlalchemy.orm import mapped_column, Mapped, relationship
+from sqlalchemy.dialects.postgresql import ARRAY
 
 
 class Schedule(Base):
@@ -11,13 +13,29 @@ class Schedule(Base):
     id: Mapped[str] = mapped_column(
         "id", UUID(as_uuid=True), primary_key=True, index=True, default=uuid.uuid4
     )
-    topic: Mapped[str] = mapped_column("topic", String)
     speaker_id: Mapped[str] = mapped_column(
         "speaker_id", UUID(as_uuid=True), ForeignKey("speaker.id"), index=True
     )
+    room_id: Mapped[str] = mapped_column(
+        "room_id", UUID(as_uuid=True), ForeignKey("room.id"), index=True, nullable=True
+    )
+    schedule_type_id: Mapped[str] = mapped_column(
+        "schedule_type_id",
+        UUID(as_uuid=True),
+        ForeignKey("schedule_type.id"),
+        index=True,
+        nullable=True,
+    )
+    title: Mapped[str] = mapped_column("title", String)
     description: Mapped[str] = mapped_column("description", String, nullable=True)
 
-    stream_link: Mapped[str] = mapped_column("stream_link", String, nullable=True)
+    # Presentation and Slide fields
+    presentation_language: Mapped[str] = mapped_column(
+        "presentation_language", String, nullable=True
+    )
+    slide_language: Mapped[str] = mapped_column("slide_language", String, nullable=True)
+    slide_link: Mapped[str] = mapped_column("slide_link", String, nullable=True)
+    tags: Mapped[List[str]] = mapped_column("tags", ARRAY(String), nullable=True)
 
     start = mapped_column("start", DateTime(timezone=True), nullable=True)
     end = mapped_column("end", DateTime(timezone=True), nullable=True)
@@ -33,5 +51,11 @@ class Schedule(Base):
         default=datetime.datetime.now(datetime.timezone.utc),
     )
     deleted_at = mapped_column("deleted_at", DateTime(timezone=True))
-    # ✅ Relationship ke Speaker
+
+    # Relationships
     speaker = relationship("Speaker", backref="schedules")
+    room = relationship("Room", back_populates="schedules")
+    schedule_type = relationship("ScheduleType", back_populates="schedules")
+    stream = relationship(
+        "Stream", back_populates="schedule", uselist=False, cascade="all, delete-orphan"
+    )
