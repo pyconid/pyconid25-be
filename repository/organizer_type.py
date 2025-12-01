@@ -31,3 +31,8 @@ def get_all_organizer_types(db: Session) -> Sequence[OrganizerType]:
     """Retrieve all organizer types from the database."""
     stmt =select(OrganizerType).order_by(OrganizerType.name.asc())
     return db.execute(stmt).scalars().all()
+
+def get_organizer_type_by_id(db: Session, id: str) -> OrganizerType | None:
+    """Retrieve an organizer type by its ID."""
+    stmt = select(OrganizerType).where(OrganizerType.id == id)
+    return db.execute(stmt).scalar()
