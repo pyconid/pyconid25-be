@@ -3,7 +3,7 @@ from typing import Optional
 from fastapi import Form, UploadFile, File
 from fastapi import APIRouter, Depends
 from fastapi.responses import FileResponse
-from pydantic import EmailStr, HttpUrl
+from pydantic import EmailStr
 from pytz import timezone
 from core.file import get_file, is_over_max_file_size, upload_file
 from models.User import MANAGEMENT_PARTICIPANT, User
@@ -135,7 +135,7 @@ async def update_user_profile(
     share_my_interest: Optional[bool] = Form(None),
     looking_for: Optional[LookingForOption] = Form(None),
     expertise: Optional[str] = Form(None),  # comma separated
-    website: Optional[HttpUrl] = Form(None),
+    website: Optional[str] = Form(None),
     github_username: Optional[str] = Form(None),
     facebook_username: Optional[str] = Form(None),
     linkedin_username: Optional[str] = Form(None),
