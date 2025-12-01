@@ -37,6 +37,7 @@ def upgrade() -> None:
         sa.Column('deleted_at', sa.DateTime(timezone=True), nullable=True),
         sa.ForeignKeyConstraint(['user_id'], ['user.id'], ),
         sa.ForeignKeyConstraint(['organizer_type_id'], ['organizer_type.id'], ),
+        sa.UniqueConstraint('user_id', 'organizer_type_id', name='uq_user_organizer_type'),
         sa.PrimaryKeyConstraint('id')
     )
     # ### end Alembic commands ###
