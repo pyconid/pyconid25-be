@@ -1,3 +1,4 @@
+import shutil
 import uuid
 import alembic.config
 from unittest import IsolatedAsyncioTestCase
@@ -11,6 +12,7 @@ from models.SpeakerType import SpeakerType
 from models.User import MANAGEMENT_PARTICIPANT, User
 from main import app
 from schemas.speaker import SpeakerDetailResponse
+from settings import FILE_STORAGE_PATH
 
 
 class TestSpeaker(IsolatedAsyncioTestCase):
@@ -341,6 +343,55 @@ class TestSpeaker(IsolatedAsyncioTestCase):
 
         # Expect 2
         self.assertEqual(response.status_code, 403)
+
+    async def test_get_speaker_profile_picture(self):
+        # Given
+        user = User(
+            username="John Doe",
+            first_name="John",
+            last_name="Doe",
+            bio="A keynote speaker",
+            profile_picture=None,
+            email="John@gmail.com",
+            instagram_username="http://instagram.com/johndoe",
+            twitter_username="http://x.com/johndoe",
+        )
+        st = SpeakerType(name="Keynote Speaker")
+        self.db.add(st)
+        speaker = Speaker(
+            id=uuid.uuid4(),
+            user=user,
+            speaker_type=st,
+        )
+        self.db.add(speaker)
+        self.db.commit()
+        app.dependency_overrides[get_db_sync] = get_db_sync_for_test(db=self.db)
+        client = TestClient(app)
+
+        # When 1
+        response = client.get(
+            f"/speaker/{str(speaker.id)}/profile-picture/",
+        )
+
+        # Expect 1
+        self.assertEqual(response.status_code, 404)
+
+        # Given 2
+        shutil.copyfile(
+            "./routes/tests/data/bandungpy.jpg",
+            f"./{FILE_STORAGE_PATH}/bandungpy.jpg",
+        )
+        user.profile_picture = "bandungpy.jpg"
+        self.db.add(user)
+        self.db.commit()
+
+        # When 2
+        response = client.get(
+            f"/speaker/{str(speaker.id)}/profile-picture/",
+        )
+
+        # Expect 2
+        self.assertEqual(response.status_code, 200)
 
     def tearDown(self):
         self.db.close()

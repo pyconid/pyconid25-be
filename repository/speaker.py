@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import Literal, Optional
 from pytz import timezone
 from sqlalchemy import select, func
 from sqlalchemy.orm import Session
@@ -9,9 +9,15 @@ from models.User import User
 from schemas.speaker import SpeakerResponseItem
 
 
-def get_all_speakers(db: Session):
+def get_all_speakers(db: Session, order_dir: Literal["asc", "desc"] = "asc"):
     # Query dasar
     stmt = select(Speaker)
+
+    # Atur order berdasarkan updated_at
+    if order_dir == "asc":
+        stmt = stmt.order_by(Speaker.updated_at.asc())
+    else:
+        stmt = stmt.order_by(Speaker.updated_at.desc())
 
     # Tambahkan pagination (offset + limit)
     # Hitung total data sebelum pagination
@@ -36,6 +42,7 @@ def get_speaker_per_page_by_search(
     db: Session,
     page: int,
     page_size: int,
+    order_dir: Literal["asc", "desc"] = "asc",
     search: Optional[str] = None,
 ):
     # Hitung offset (data mulai dari baris ke-berapa)
@@ -43,6 +50,12 @@ def get_speaker_per_page_by_search(
 
     # Query dasar
     stmt = select(Speaker)
+
+    # Atur order berdasarkan updated_at
+    if order_dir == "asc":
+        stmt = stmt.order_by(Speaker.updated_at.asc())
+    else:
+        stmt = stmt.order_by(Speaker.updated_at.desc())
 
     # Jika ada keyword pencarian
     if search:

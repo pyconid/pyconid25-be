@@ -2,9 +2,10 @@ from datetime import date, datetime
 from typing import Optional
 from fastapi import Form, UploadFile, File
 from fastapi import APIRouter, Depends
-from pydantic import EmailStr, HttpUrl
+from fastapi.responses import FileResponse
+from pydantic import EmailStr
 from pytz import timezone
-from core.file import is_over_max_file_size, upload_file
+from core.file import get_file, is_over_max_file_size, upload_file
 from models.User import MANAGEMENT_PARTICIPANT, User
 from schemas.user_profile import (
     DetailSearchUserProfile,
@@ -29,12 +30,14 @@ from core.responses import (
     BadRequest,
     Forbidden,
     InternalServerError,
+    NotFound,
     Ok,
     common_response,
     Unauthorized,
 )
 from core.security import (
     get_current_user,
+    get_user_from_token,
 )
 from models import get_db_sync
 from schemas.common import (
@@ -132,7 +135,7 @@ async def update_user_profile(
     share_my_interest: Optional[bool] = Form(None),
     looking_for: Optional[LookingForOption] = Form(None),
     expertise: Optional[str] = Form(None),  # comma separated
-    website: Optional[HttpUrl] = Form(None),
+    website: Optional[str] = Form(None),
     github_username: Optional[str] = Form(None),
     facebook_username: Optional[str] = Form(None),
     linkedin_username: Optional[str] = Form(None),
@@ -251,6 +254,21 @@ async def get_user_profile(user: User = Depends(get_current_user)):
         return common_response(Unauthorized(message="Unauthorized"))
     user_schema = UserProfilePrivate.model_validate(user)
     return user_schema
+
+
+@router.get("/{token}/profile-picture/", response_class=FileResponse)
+async def get_user_profile_picture(token: str, db: Session = Depends(get_db_sync)):
+    user = get_user_from_token(db, token)
+    if user is None:
+        return common_response(Unauthorized(message="Unauthorized"))
+    if user.profile_picture is None:
+        return common_response(NotFound(message="Profile picture not found"))
+
+    photo = get_file(path=user.profile_picture)
+    if photo is None:
+        return common_response(NotFound(error="Profile picture file not found"))
+
+    return photo
 
 
 @router.get(

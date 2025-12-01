@@ -107,11 +107,23 @@ class User(Base):
     attendance_day_1_at = mapped_column(
         "attendance_day_1_at", DateTime(timezone=True), nullable=True
     )
+    attendance_day_1_updated_by: Mapped[str] = mapped_column(
+        "attendance_day_1_updated_by",
+        UUID(as_uuid=True),
+        ForeignKey("user.id"),
+        nullable=True,
+    )
     attendance_day_2: Mapped[bool] = mapped_column(
         "attendance_day_2", Boolean, nullable=True, default=False
     )
     attendance_day_2_at = mapped_column(
         "attendance_day_2_at", DateTime(timezone=True), nullable=True
+    )
+    attendance_day_2_updated_by: Mapped[str] = mapped_column(
+        "attendance_day_2_updated_by",
+        UUID(as_uuid=True),
+        ForeignKey("user.id"),
+        nullable=True,
     )
     created_at = mapped_column("created_at", DateTime(timezone=True))
     updated_at = mapped_column("updated_at", DateTime(timezone=True))
@@ -125,3 +137,19 @@ class User(Base):
     country = relationship("Country", back_populates="users")
     state = relationship("State", back_populates="users")
     city = relationship("City", back_populates="users")
+
+    # Self-referential relationships for attendance tracking
+    attendance_day_1_updated_by_user = relationship(
+        "User",
+        remote_side=[id],
+        foreign_keys=[attendance_day_1_updated_by],
+        backref="attendance_day_1_updates",
+        lazy="joined",
+    )
+    attendance_day_2_updated_by_user = relationship(
+        "User",
+        remote_side=[id],
+        foreign_keys=[attendance_day_2_updated_by],
+        backref="attendance_day_2_updates",
+        lazy="joined",
+    )
