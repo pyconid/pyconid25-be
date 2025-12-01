@@ -1,7 +1,7 @@
 from typing import Optional
 from fastapi import Query
 from pydantic import BaseModel, Field
-
+from enum import Enum
 
 class LoginRequest(BaseModel):
     username: str
@@ -88,3 +88,9 @@ class GoogleVerifiedResponse(BaseModel):
     refresh_token: str
     is_new_user: bool
     google_email: str
+    
+class AuthorizationStatusEnum(str, Enum):
+    FORBIDDEN = "forbidden"
+    UNAUTHORIZED = "unauthorized"
+    PASSED = "passed"
+    
