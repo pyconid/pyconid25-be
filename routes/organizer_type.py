@@ -1,7 +1,9 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from core.responses import Ok, common_response, InternalServerError
-
+from schemas.common import (
+    InternalServerErrorResponse,
+)
 from models import get_db_sync
 from schemas.organizer_type import OrganizerTypeAllResponse, organizer_type_all_response_from_models
 from repository.organizer_type import get_all_organizer_types
@@ -11,7 +13,7 @@ router = APIRouter(prefix="/organizer-type", tags=["Organizer Type"])
     "/",
     responses={
         "200": {"model": OrganizerTypeAllResponse},
-        "500": {"model": InternalServerError}
+        "500": {"model": InternalServerErrorResponse}
     },
 )
 async def get_speaker(db: Session = Depends(get_db_sync)):
