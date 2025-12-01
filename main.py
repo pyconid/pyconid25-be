@@ -13,7 +13,7 @@ from routes.speaker import router as speaker_router
 from routes.payment import router as payment_router
 from routes.voucher import router as voucher_router
 from routes.speaker_type import router as speaker_type_router
-
+from routes.organizer_type import router as organizer_type_router
 
 health_check()
 
@@ -36,7 +36,7 @@ app.include_router(schedule_router)
 app.include_router(payment_router)
 app.include_router(voucher_router)
 app.include_router(speaker_type_router)
-
+app.include_router(organizer_type_router)
 
 @app.exception_handler(ValidationError)
 async def pydantic_validation_exception_handler(request: Request, exc: ValidationError):

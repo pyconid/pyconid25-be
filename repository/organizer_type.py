@@ -1,8 +1,12 @@
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+from typing import Sequence
 from core.log import logger
 from models.OrganizerType import OrganizerType
-from sqlalchemy.orm import Session
+
 
 def insert_initial_organizer_types(db: Session) -> None:
+    """Insert predefined organizer types into the database."""
     logger.info("Inserting initial organizer types...")
     try:
         initial_types = [
@@ -21,3 +25,9 @@ def insert_initial_organizer_types(db: Session) -> None:
         db.rollback()
         logger.error(f"Failed to insert initial organizer types: {e}")
         raise
+
+
+def get_all_organizer_types(db: Session) -> Sequence[OrganizerType]:
+    """Retrieve all organizer types from the database."""
+    stmt =select(OrganizerType).order_by(OrganizerType.name.asc())
+    return db.execute(stmt).scalars().all()
