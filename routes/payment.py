@@ -1,17 +1,33 @@
 import traceback
 from typing import Optional
+
 from fastapi import APIRouter, Depends, Header
 from sqlalchemy.orm import Session
 
-from models import get_db_sync
-from core.security import get_user_from_token, oauth2_scheme
+from core.log import logger
+from core.mayar_service import MayarService
 from core.responses import (
-    Forbidden,
-    common_response,
-    Ok,
     BadRequest,
-    Unauthorized,
+    Forbidden,
     InternalServerError,
+    Ok,
+    Unauthorized,
+    common_response,
+)
+from core.security import get_user_from_token, oauth2_scheme
+from models import get_db_sync
+from models.Payment import PaymentStatus
+from models.Ticket import Ticket as TicketModel
+from models.User import User as UserModel
+from models.Voucher import Voucher as VoucherModel
+from repository import (
+    payment as paymentRepo,
+)
+from repository import (
+    ticket as ticketRepo,
+)
+from repository import (
+    voucher as voucherRepo,
 )
 from schemas.common import (
     BadRequestResponse,
@@ -24,29 +40,24 @@ from schemas.payment import (
     CreatePaymentResponse,
     DetailPaymentResponse,
     PaymentListResponse,
-    Ticket as TicketSchema,
-    User as UserSchema,
-    Voucher as VoucherSchema,
     VoucherInfo,
     VoucherValidateResponse,
 )
-from models.Voucher import Voucher as VoucherModel
-from models.User import User as UserModel
-from models.Ticket import Ticket as TicketModel
-from repository import (
-    payment as paymentRepo,
-    ticket as ticketRepo,
-    voucher as voucherRepo,
+from schemas.payment import (
+    Ticket as TicketSchema,
 )
-from core.mayar_service import MayarService
-from models.Payment import PaymentStatus
+from schemas.payment import (
+    User as UserSchema,
+)
+from schemas.payment import (
+    Voucher as VoucherSchema,
+)
 from settings import (
+    FRONTEND_BASE_URL,
     MAYAR_API_KEY,
     MAYAR_BASE_URL,
     MAYAR_WEBHOOK_SECRET,
-    FRONTEND_BASE_URL,
 )
-from core.log import logger
 
 router = APIRouter(prefix="/payment", tags=["Payment"])
 
@@ -375,7 +386,7 @@ async def list_payments(
             payment_link: Optional[str] = payment.payment_link
             if payment.status == PaymentStatus.PAID:
                 payment_link = (
-                    f"{FRONTEND_BASE_URL}/auth/payment/{str(payment.id)}"
+                    f"{FRONTEND_BASE_URL}/auth/user-ticket"
                     if FRONTEND_BASE_URL
                     else None
                 )
@@ -515,7 +526,7 @@ async def get_payment_detail(
         payment_link: Optional[str] = payment.payment_link
         if payment.status == PaymentStatus.PAID:
             payment_link = (
-                f"{FRONTEND_BASE_URL}/auth/payment/{str(payment.id)}"
+                f"{FRONTEND_BASE_URL}/auth/user-ticket"
                 if FRONTEND_BASE_URL
                 else None
             )
