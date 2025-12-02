@@ -40,9 +40,9 @@ from schemas.ticket import (
     MyTicketPayment,
     MyTicketResponse,
     MyTicketVoucher,
-    UserInfo,
     TicketListResponse,
     TicketResponse,
+    UserInfo,
 )
 
 router = APIRouter(prefix="/ticket", tags=["Ticket"])
@@ -115,7 +115,9 @@ async def get_my_ticket(
                     else None
                 ),
             ),
-            participant_type=user.participant_type or ticket.user_participant_type,
+            participant_type=(
+                user.participant_type or voucher.type or ticket.user_participant_type
+            ),
             user=UserInfo(
                 id=str(user.id),
                 first_name=user.first_name,
