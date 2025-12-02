@@ -91,7 +91,7 @@ async def get_speaker_by_id(
 
     data = speakerRepo.get_speaker_by_id(db=db, id=id)
     if data is None:
-        return common_response(NotFound(error=f"Speaker with {id} not found"))
+        return common_response(NotFound(message=f"Speaker with {id} not found"))
 
     return common_response(
         Ok(
