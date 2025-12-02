@@ -171,6 +171,8 @@ class ScheduleResponseItem(BaseModel):
     id: UUID
     title: str
     speaker: Optional[SimplePublicSpeakerInfo] = None
+    room: RoomInfo
+    schedule_type: ScheduleTypeInfo
     presentation_language: Optional[Language] = None
     tags: Optional[List[str]] = None
     start: datetime

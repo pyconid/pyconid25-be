@@ -20,7 +20,11 @@ def get_all_schedules(
     # Hitung offset (data mulai dari baris ke-berapa)
 
     # Query dasar
-    stmt = select(Schedule)
+    stmt = select(Schedule).options(
+        joinedload(Schedule.speaker),
+        joinedload(Schedule.room),
+        joinedload(Schedule.schedule_type),
+    )
 
     # Jika ada keyword pencarian
     if search:
@@ -39,7 +43,7 @@ def get_all_schedules(
     results_schema = []
     try:
         # Tambahkan pagination (offset + limit)
-        stmt = stmt.options(joinedload(Schedule.speaker)).order_by(Schedule.start.asc())
+        stmt = stmt.order_by(Schedule.start.asc())
 
         # Eksekusi query dan ambil hasilnya
         results = db.scalars(stmt).all()
@@ -69,7 +73,11 @@ def get_schedule_per_page_by_search(
     offset = (page - 1) * page_size
 
     # Query dasar
-    stmt = select(Schedule)
+    stmt = select(Schedule).options(
+        joinedload(Schedule.speaker),
+        joinedload(Schedule.room),
+        joinedload(Schedule.schedule_type),
+    )
 
     # Jika ada keyword pencarian
     if search:
@@ -88,12 +96,7 @@ def get_schedule_per_page_by_search(
     results_schema = []
     try:
         # Tambahkan pagination (offset + limit)
-        stmt = (
-            stmt.options(joinedload(Schedule.speaker))
-            .offset(offset)
-            .limit(page_size)
-            .order_by(Schedule.start.asc())
-        )
+        stmt = stmt.offset(offset).limit(page_size).order_by(Schedule.start.asc())
 
         # Eksekusi query dan ambil hasilnya
         results = db.scalars(stmt).all()
