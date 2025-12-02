@@ -1,11 +1,13 @@
+from datetime import date, datetime
 from math import ceil
-from sqlalchemy.sql.operators import or_
-from typing import List, Tuple
-from datetime import datetime, date
-from typing import Optional, Union
+from typing import List, Optional, Tuple, Union
 from uuid import UUID
-from sqlalchemy import select, func
+
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.sql import exists
+from sqlalchemy.sql.operators import or_
+
 from models.Schedule import Schedule
 from schemas.schedule import ScheduleResponseItem
 
@@ -168,11 +170,11 @@ def get_schedule_cms(
 def create_schedule(
     db: Session,
     title: str,
-    speaker_id: Union[UUID, str],
     room_id: Union[UUID, str],
     schedule_type_id: Union[UUID, str],
     start: datetime,
     end: datetime,
+    speaker_id: Optional[Union[UUID, str]] = None,
     description: Optional[str] = None,
     presentation_language: Optional[str] = None,
     slide_language: Optional[str] = None,
@@ -221,15 +223,29 @@ def get_schedule_by_id(
     return db.execute(stmt).scalar_one_or_none()
 
 
+def is_speaker_already_scheduled(
+    db: Session,
+    speaker_id: Union[UUID, str],
+) -> bool:
+    query = select(
+        exists().where(
+            Schedule.speaker_id == speaker_id,
+            Schedule.deleted_at.is_(None),
+        )
+    )
+    result = db.execute(query).scalar()
+    return bool(result)
+
+
 def update_schedule(
     db: Session,
     schedule: Schedule,
     title: str,
     start: datetime,
     end: datetime,
-    speaker_id: Union[UUID, str],
     room_id: Union[UUID, str],
     schedule_type_id: Union[UUID, str],
+    speaker_id: Optional[Union[UUID, str]] = None,
     description: Optional[str] = None,
     presentation_language: Optional[str] = None,
     slide_language: Optional[str] = None,
