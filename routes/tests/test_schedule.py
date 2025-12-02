@@ -119,6 +119,7 @@ class TestSchedule(IsolatedAsyncioTestCase):
         self.assertEqual(data["speaker"]["id"], str(self.speaker.id))
         mock_create_stream.assert_called_once_with(is_public=True)
 
+    @patch("core.mux_service.mux_service.create_live_stream")
     async def test_create_schedule_without_speaker_success(self, mock_create_stream):
         # Given
         mock_create_stream.return_value = (
@@ -161,6 +162,7 @@ class TestSchedule(IsolatedAsyncioTestCase):
         self.assertIsNone(data["speaker"])
         mock_create_stream.assert_called_once_with(is_public=True)
 
+    @patch("core.mux_service.mux_service.create_live_stream")
     async def test_create_schedule_speaker_already_scheduled(self, mock_create_stream):
         # Given
         mock_create_stream.return_value = (
