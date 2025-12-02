@@ -297,7 +297,7 @@ async def get_speaker_profile_picture(id: str, db: Session = Depends(get_db_sync
     photo = get_file(path=data.user.profile_picture)
     if photo is None:
         return common_response(
-            NotFound(error=f"Profile picture file for speaker with {id} not found")
+            NotFound(message=f"Profile picture file for speaker with {id} not found")
         )
 
     return photo
