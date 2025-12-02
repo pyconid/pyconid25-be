@@ -87,9 +87,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         # Skip rate limiting for excluded paths
-        if self._should_exclude(request.url.path.strip("/")) or self._should_exclude(
-            request.url.path
-        ):
+        if self._should_exclude(request.url.path):
             return await call_next(request)
 
         # Get rate limit key
