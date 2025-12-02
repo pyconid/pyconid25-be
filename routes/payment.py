@@ -526,9 +526,7 @@ async def get_payment_detail(
         payment_link: Optional[str] = payment.payment_link
         if payment.status == PaymentStatus.PAID:
             payment_link = (
-                f"{FRONTEND_BASE_URL}/auth/user-ticket"
-                if FRONTEND_BASE_URL
-                else None
+                f"{FRONTEND_BASE_URL}/auth/user-ticket" if FRONTEND_BASE_URL else None
             )
         elif payment.status == PaymentStatus.CLOSED:
             payment_link = None
