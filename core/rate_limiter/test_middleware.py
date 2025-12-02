@@ -297,7 +297,7 @@ class TestRateLimitMiddleware(IsolatedAsyncioTestCase):
         self.assertIn("X-RateLimit-Limit", response1.headers)
 
         # Exceed limit
-        response2 = await middleware.dispatch(request_non_matching, mock_call_next)
+        await middleware.dispatch(request_non_matching, mock_call_next)
         response3 = await middleware.dispatch(request_non_matching, mock_call_next)
         self.assertEqual(response3.status_code, 429)
         self.assertEqual(response3.headers["X-RateLimit-Remaining"], "0")
