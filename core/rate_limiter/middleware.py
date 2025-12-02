@@ -1,9 +1,12 @@
+from fnmatch import fnmatch
 from typing import Callable, Optional
+
 from fastapi import Request, status
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
-from core.rate_limiter.memory import InMemoryRateLimiter
+
 from core.rate_limiter.key_builder import RateLimitKeyBuilder
+from core.rate_limiter.memory import InMemoryRateLimiter
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
@@ -57,10 +60,25 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         )
 
     def _should_exclude(self, path: str) -> bool:
-        """Check if path should be excluded from rate limiting"""
+        """
+        Check if path should be excluded from rate limiting.
+
+        Supports:
+        - exact prefix match (old behavior)
+        - glob patterns like '/user-profile/*/profile-picture/'
+        """
+        normalized_path = path.rstrip("/") or "/"
+
         for exclude_path in self.exclude_paths:
-            if path.startswith(exclude_path):
-                return True
+            pattern = exclude_path.rstrip("/") or "/"
+
+            if any(ch in pattern for ch in ["*", "?", "["]):
+                if fnmatch(normalized_path, pattern):
+                    return True
+            else:
+                if normalized_path.startswith(pattern):
+                    return True
+
         return False
 
     async def dispatch(self, request: Request, call_next):
