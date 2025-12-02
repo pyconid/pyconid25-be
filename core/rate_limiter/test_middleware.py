@@ -1,10 +1,12 @@
 import asyncio
 from unittest.async_case import IsolatedAsyncioTestCase
 from unittest.mock import Mock
+
 from fastapi import Request
 from fastapi.responses import JSONResponse
-from core.rate_limiter.middleware import RateLimitMiddleware
+
 from core.rate_limiter.memory import InMemoryRateLimiter
+from core.rate_limiter.middleware import RateLimitMiddleware
 from main import app
 
 
@@ -249,6 +251,56 @@ class TestRateLimitMiddleware(IsolatedAsyncioTestCase):
         self.assertEqual(response.status_code, 200)
         # Should have rate limit headers
         self.assertIn("X-RateLimit-Limit", response.headers)
+
+    async def test_excluded_wildcard_paths_no_rate_limiting(self):
+        middleware = RateLimitMiddleware(
+            app=app,
+            backend=self.backend,
+            enabled=True,
+            limit=2,
+            window=self.window,
+            exclude_paths=["/user-profile/*/profile-picture/"],
+            use_fingerprint=False,
+        )
+
+        async def mock_call_next(req):
+            return JSONResponse({"status": "ok"})
+
+        # Exact pattern with trailing slash
+        request_exact = self.create_mock_request(
+            path="/user-profile/123/profile-picture/"
+        )
+
+        # Variant without trailing slash (should still match because of normalization)
+        request_no_trailing = self.create_mock_request(
+            path="/user-profile/123/profile-picture"
+        )
+
+        # Different id but same pattern
+        request_different_id = self.create_mock_request(
+            path="/user-profile/456/profile-picture/"
+        )
+
+        # All wildcard-matched paths should bypass rate limiting even over the limit
+        for req in [request_exact, request_no_trailing, request_different_id]:
+            for _ in range(5):
+                response = await middleware.dispatch(req, mock_call_next)
+                self.assertEqual(response.status_code, 200)
+                self.assertNotIn("X-RateLimit-Limit", response.headers)
+
+        # Non-matching path should be rate limited as normal
+        request_non_matching = self.create_mock_request(
+            path="/user-profile/123/profile-banner/"
+        )
+        response1 = await middleware.dispatch(request_non_matching, mock_call_next)
+        self.assertEqual(response1.status_code, 200)
+        self.assertIn("X-RateLimit-Limit", response1.headers)
+
+        # Exceed limit
+        response2 = await middleware.dispatch(request_non_matching, mock_call_next)
+        response3 = await middleware.dispatch(request_non_matching, mock_call_next)
+        self.assertEqual(response3.status_code, 429)
+        self.assertEqual(response3.headers["X-RateLimit-Remaining"], "0")
 
     async def test_concurrent_requests_remaining_accurate(self):
         middleware = RateLimitMiddleware(
