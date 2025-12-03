@@ -4,17 +4,31 @@ from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 from core.health_check import health_check
 from core.log import logger
+from core.rate_limiter.memory import InMemoryRateLimiter
+from core.rate_limiter.middleware import RateLimitMiddleware
 from routes.auth import router as auth_router
 from routes.user_profile import router as user_profile_router
 from routes.locations import router as locations_router
 from routes.ticket import router as ticket_router
+from routes.room import router as room_router
 from routes.schedule import router as schedule_router
 from routes.speaker import router as speaker_router
 from routes.payment import router as payment_router
+from routes.streaming import router as streaming_router
 from routes.voucher import router as voucher_router
 from routes.speaker_type import router as speaker_type_router
 from routes.organizer_type import router as organizer_type_router
 from routes.organizer import router as organizer_router
+from routes.schedule_type import router as schedule_type_router
+from routes.volunteer import router as volunteer_router
+
+from settings import (
+    RATE_LIMIT_ENABLED,
+    RATE_LIMIT_EXCLUDED_PATHS,
+    RATE_LIMIT_PER_MINUTE,
+    RATE_LIMIT_WINDOW,
+)
+
 health_check()
 
 app = FastAPI(title="PyconId 2025 BE")
@@ -27,17 +41,31 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.add_middleware(
+    RateLimitMiddleware,
+    backend=InMemoryRateLimiter,
+    enabled=RATE_LIMIT_ENABLED,
+    limit=RATE_LIMIT_PER_MINUTE,
+    window=RATE_LIMIT_WINDOW,
+    exclude_paths=RATE_LIMIT_EXCLUDED_PATHS,
+)
+
 app.include_router(auth_router)
 app.include_router(user_profile_router)
 app.include_router(locations_router)
 app.include_router(ticket_router)
+app.include_router(room_router)
 app.include_router(speaker_router)
 app.include_router(schedule_router)
 app.include_router(payment_router)
+app.include_router(streaming_router)
 app.include_router(voucher_router)
 app.include_router(speaker_type_router)
 app.include_router(organizer_type_router)
 app.include_router(organizer_router)
+app.include_router(schedule_type_router)
+app.include_router(volunteer_router)
+
 
 @app.exception_handler(ValidationError)
 async def pydantic_validation_exception_handler(request: Request, exc: ValidationError):

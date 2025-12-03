@@ -206,7 +206,7 @@ async def update_user_profile(
         if is_over_max_file_size(upload_file=profile_picture):
             return common_response(
                 BadRequest(
-                    error=f"File size exceeds the maximum limit ({MAX_FILE_SIZE_MB} mb)"
+                    message=f"File size exceeds the maximum limit ({MAX_FILE_SIZE_MB} mb)"
                 )
             )
         now = datetime.now().astimezone(timezone("Asia/Jakarta"))
@@ -266,7 +266,7 @@ async def get_user_profile_picture(token: str, db: Session = Depends(get_db_sync
 
     photo = get_file(path=user.profile_picture)
     if photo is None:
-        return common_response(NotFound(error="Profile picture file not found"))
+        return common_response(NotFound(message="Profile picture file not found"))
 
     return photo
 

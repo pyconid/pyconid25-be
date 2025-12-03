@@ -91,7 +91,7 @@ async def get_speaker_by_id(
 
     data = speakerRepo.get_speaker_by_id(db=db, id=id)
     if data is None:
-        return common_response(NotFound(error=f"Speaker with {id} not found"))
+        return common_response(NotFound(message=f"Speaker with {id} not found"))
 
     return common_response(
         Ok(
@@ -297,7 +297,7 @@ async def get_speaker_profile_picture(id: str, db: Session = Depends(get_db_sync
     photo = get_file(path=data.user.profile_picture)
     if photo is None:
         return common_response(
-            NotFound(error=f"Profile picture file for speaker with {id} not found")
+            NotFound(message=f"Profile picture file for speaker with {id} not found")
         )
 
     return photo
