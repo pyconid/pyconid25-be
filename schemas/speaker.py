@@ -1,8 +1,10 @@
 from typing import List, Literal, Optional
-from fastapi import Query
-from pydantic import BaseModel
 from uuid import UUID
 
+from fastapi import Query
+from pydantic import BaseModel
+
+from schemas.schedule import PublicSpeakerInfo
 from schemas.speaker_type import DetailSpeakerResponse
 
 
@@ -30,10 +32,7 @@ class SpeakerResponseItem(BaseModel):
     id: UUID
     user: UserInSpeakerResponse
     speaker_type: Optional[DetailSpeakerResponse] = None
-    # is_keynote_speaker: Optional[bool] = None
-    model_config = {
-        "from_attributes": True  # ⬅️ penting biar bisa baca dari SQLAlchemy ORM object
-    }
+    model_config = {"from_attributes": True}
 
 
 class SpeakerResponse(BaseModel):
@@ -42,6 +41,10 @@ class SpeakerResponse(BaseModel):
     count: int
     page_count: int
     results: List[SpeakerResponseItem]
+
+
+class AllSpeakerResponse(BaseModel):
+    results: List[PublicSpeakerInfo]
 
 
 class SpeakerDetailResponse(BaseModel):

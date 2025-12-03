@@ -226,6 +226,25 @@ def get_schedule_by_id(
     return db.execute(stmt).scalar_one_or_none()
 
 
+def get_schedule_by_speaker_id(
+    db: Session, speaker_id: Union[UUID, str], include_deleted: bool = False
+) -> Optional[Schedule]:
+    stmt = (
+        select(Schedule)
+        .options(
+            joinedload(Schedule.speaker),
+            joinedload(Schedule.room),
+            joinedload(Schedule.schedule_type),
+        )
+        .where(Schedule.speaker_id == speaker_id, Schedule.deleted_at.is_(None))
+    )
+
+    if not include_deleted:
+        stmt = stmt.where(Schedule.deleted_at.is_(None))
+
+    return db.execute(stmt).scalar_one_or_none()
+
+
 def is_speaker_already_scheduled(
     db: Session,
     speaker_id: Union[UUID, str],

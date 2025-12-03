@@ -4,7 +4,7 @@ from typing import List, Optional
 from uuid import UUID
 
 from fastapi import Query
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, Field, model_serializer, model_validator
 
 from models.Stream import StreamStatus
 from schemas.speaker_type import DetailSpeakerResponse
@@ -101,7 +101,33 @@ class PublicSpeakerUser(BaseModel):
     twitter_username: Optional[str] = None
     instagram_username: Optional[str] = None
 
+    share_my_email_and_phone_number: bool = Field(default=False, exclude=True)
+    share_my_job_and_company: bool = Field(default=False, exclude=True)
+    share_my_public_social_media: bool = Field(default=False, exclude=True)
+
     model_config = {"from_attributes": True}
+
+    @model_serializer(mode="wrap")
+    def apply_privacy(self, handler):
+        data = handler(self)
+
+        if not self.share_my_email_and_phone_number:
+            data["email"] = None
+            # data["phone"] = None
+
+        if not self.share_my_job_and_company:
+            data["company"] = None
+            data["job_category"] = None
+            data["job_title"] = None
+
+        if not self.share_my_public_social_media:
+            data["website"] = None
+            data["facebook_username"] = None
+            data["linkedin_username"] = None
+            data["twitter_username"] = None
+            data["instagram_username"] = None
+
+        return data
 
 
 class PublicSpeakerInfo(BaseModel):
