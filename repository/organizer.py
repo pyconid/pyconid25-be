@@ -1,6 +1,6 @@
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
-
+from typing import Sequence
 from sqlalchemy.orm import Session
 from models.Organizer import Organizer
 from models.OrganizerType import OrganizerType
@@ -8,7 +8,7 @@ from models.User import User
 from core.helper import get_current_time_in_timezone
 from settings import TZ
 from core.log import logger
-
+from schemas.organizer import OrganizersByTypeAll, organizers_by_type_response_from_models
 def insert_organizer(db: Session, user: User, organizer_type: OrganizerType) -> Organizer:
     try:
         logger.info("Creating organizer in the database")
@@ -59,3 +59,31 @@ def delete_organizer_data(db: Session, organizer: Organizer) -> None:
         logger.error(f"Error deleting organizer with ID: {organizer.id} - {e}")
         db.rollback()
         raise e
+    
+    
+def get_organizers_by_type(db: Session):
+    try:
+        stmt = (
+                select(OrganizerType)
+                .outerjoin(Organizer)
+                .distinct()
+            )
+        organizer_types: Sequence[OrganizerType]  = db.execute(stmt).scalars().all()
+        logger.info(f"Fetched {len(organizer_types)} organizer types")
+        result = []
+        for org_type in organizer_types:
+                organizers = db.execute(
+                    select(Organizer)
+                    .join(Organizer.user)
+                    .where(
+                        (Organizer.organizer_type_id == org_type.id) )
+                    
+                ).scalars().all()
+                if organizers:
+                    result.append(organizers_by_type_response_from_models(org_type, organizers))
+                logger.debug(f"Fetched {len(organizers)} organizers for type {org_type.name}")
+        return OrganizersByTypeAll(results=result)
+    except Exception as e:
+        logger.error(f"Error fetching organizers by type: {e}")
+        raise e
+

@@ -1,8 +1,9 @@
 from pydantic import BaseModel
-from typing import Optional, Literal
+from typing import Optional, Literal, Sequence
 
 from fastapi import Query
 from models.Organizer import Organizer
+from models.OrganizerType import OrganizerType
 
 
 class OrganizerQuery(BaseModel):
@@ -76,3 +77,47 @@ def organizer_response_item_from_model(organizer: Organizer) -> OrganizerRespons
         created_at=organizer.created_at.isoformat() if organizer.created_at else None,
         updated_at=organizer.updated_at.isoformat() if organizer.updated_at else None,
     )
+    
+def organizer_detail_user_from_model(organizer: Organizer) -> OrganizerDetailUser:
+    """Convert Organizer ORM model to OrganizerDetailUser Pydantic model."""
+    user = organizer.user
+    return OrganizerDetailUser(
+        id=str(user.id),
+        first_name=user.first_name,
+        last_name=user.last_name,
+        username=user.username,
+        bio=user.bio,
+        profile_picture=user.profile_picture,
+        email=user.email,
+        instagram_username=user.instagram_username,
+        twitter_username=user.twitter_username,
+    )
+
+def organizer_detail_response_from_model(organizer: Organizer) -> OrganizerDetailResponse:
+    """Convert Organizer ORM model to OrganizerDetailResponse Pydantic model."""
+    organizer_type = organizer.organizer_type
+    return OrganizerDetailResponse(
+        id=str(organizer.id),
+        user=organizer_detail_user_from_model(organizer),
+        organizer_type=OrganizerDetailType(
+            id=str(organizer_type.id),
+            name=organizer_type.name,
+        ),
+        created_at=organizer.created_at.isoformat() if organizer.created_at else None,
+        updated_at=organizer.updated_at.isoformat() if organizer.updated_at else None,
+    )
+    
+    
+def organizers_by_type_response_from_models(organizer_type:OrganizerType, organizers: Sequence[Organizer]) -> OrganizersByType:
+    """Convert OrganizerType and list of Organizer ORM models to OrganizersByType Pydantic model."""
+    return OrganizersByType(
+        organizer_type=OrganizerDetailType(
+            id=str(organizer_type.id),
+            name=organizer_type.name,
+        ),
+        organizers=[
+            organizer_detail_user_from_model(org)
+            for org in organizers
+        ],
+    )
+

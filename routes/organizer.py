@@ -15,18 +15,24 @@ from core.responses import (
     NotFound,
     common_response,
 )
-from schemas.organizer import OrganizerCreateRequest, organizer_response_item_from_model
+from schemas.organizer import OrganizerCreateRequest, organizer_response_item_from_model, organizer_detail_response_from_model
 from repository.user import get_user_by_id
 from repository.organizer_type import get_organizer_type_by_id
-from repository.organizer import insert_organizer, delete_organizer_data, get_organizer_by_id
-
+from repository.organizer import insert_organizer, delete_organizer_data, get_organizer_by_id, get_organizers_by_type
 router = APIRouter(prefix="/organizer", tags=["Organizer"])
 
 
 @router.get("/")
 def get_organizers(db: Session = Depends(get_db_sync)):
     logger.info("Fetching all organizers")
-    pass
+    try:
+        data = get_organizers_by_type(db=db)
+        return common_response(Ok(data=data.model_dump()))
+    except Exception as e:
+        logger.error(f"Error fetching organizers by type: {e}")
+        return common_response(InternalServerError(error=str(e)))
+
+
 
 
 @router.post("/")
@@ -71,7 +77,16 @@ def create_organizer(
 @router.get("/{organizer_id}")
 def find_organizer_by_id(organizer_id: str, db: Session = Depends(get_db_sync)):
     logger.info(f"Fetching organizer with ID: {organizer_id}")
-    pass
+    try:
+        organizer = get_organizer_by_id(db, organizer_id)
+        if not organizer:
+            logger.error(f"Organizer with ID {organizer_id} not found")
+            return common_response(NotFound(message="Organizer not found"))
+        response = organizer_detail_response_from_model(organizer)
+        return common_response(Ok(data=response.model_dump()))
+    except Exception as e:
+        logger.error(f"Error fetching organizer: {e}")
+        return common_response(InternalServerError(error=str(e)))
 
 
 @router.put("/{organizer_id}")
@@ -115,6 +130,8 @@ def delete_organizer(
     except Exception as e:
         logger.error(f"Error deleting organizer: {e}")
         return common_response(InternalServerError(error=str(e)))
+
+
 
 
 @router.get("/{organizer_id}/profile-picture")
