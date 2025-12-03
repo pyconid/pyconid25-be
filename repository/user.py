@@ -7,7 +7,8 @@ from typing import Optional
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from models.User import User
+from models.User import VOLUNTEER_PARTICIPANT, User
+from models.Volunteer import Volunteer
 from schemas.user_profile import UserProfileDB
 
 
@@ -176,3 +177,23 @@ def update_user_profile(
     db.commit()
     db.refresh(user)
     return user
+
+
+def get_user_for_volunteer(db: Session, search: Optional[str] = None) -> list[User]:
+    stmt = (
+        select(User)
+        .where(User.participant_type == VOLUNTEER_PARTICIPANT)
+        .join(Volunteer, User.volunteer, isouter=True)
+        .where(Volunteer.id.is_(None))
+    )
+    if search:
+        search_pattern = f"%{search}%"
+        stmt = stmt.where(
+            (User.username.ilike(search_pattern))
+            | (User.first_name.ilike(search_pattern))
+            | (User.last_name.ilike(search_pattern))
+            | (User.email.ilike(search_pattern))
+        )
+    stmt = stmt.order_by(User.email.asc())
+    results = db.execute(stmt).scalars().all()
+    return results

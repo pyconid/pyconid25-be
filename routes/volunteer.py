@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Optional
 from fastapi import APIRouter, Depends
 from fastapi.responses import FileResponse
 from pytz import timezone
@@ -15,6 +16,7 @@ from schemas.volunteer import (
     UpdateVolunteerRequest,
     UpdateVolunteerResponse,
     VolunteerResponseItem,
+    VolunteerUserResponse,
 )
 from sqlalchemy.orm import Session
 from core.responses import (
@@ -383,3 +385,41 @@ async def get_volunteer_profile_picture(id: str, db: Session = Depends(get_db_sy
         )
 
     return photo
+
+
+@router.get(
+    "/user/",
+    responses={
+        "200": {"model": VolunteerUserResponse},
+        "401": {"model": ForbiddenResponse},
+        "500": {"model": InternalServerErrorResponse},
+    },
+)
+async def get_user_volunteers(
+    search: Optional[str] = None,
+    db: Session = Depends(get_db_sync),
+    user: User = Depends(get_current_user),
+):
+    if user is None:
+        return common_response(Unauthorized(message="Unauthorized"))
+
+    if user.participant_type != MANAGEMENT_PARTICIPANT:
+        return common_response(Forbidden())
+
+    all_user = userRepo.get_user_for_volunteer(db=db, search=search)
+    return common_response(
+        Ok(
+            data=VolunteerUserResponse(
+                results=[
+                    VolunteerUserResponse.DetailUser(
+                        id=str(user.id),
+                        username=user.username,
+                        first_name=user.first_name,
+                        last_name=user.last_name,
+                        email=user.email,
+                    )
+                    for user in all_user
+                ]
+            ).model_dump()
+        )
+    )

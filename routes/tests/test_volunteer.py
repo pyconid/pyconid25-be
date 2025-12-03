@@ -8,9 +8,9 @@ from sqlalchemy import select
 from core.security import generate_token_from_user
 from models import engine, db, get_db_sync, get_db_sync_for_test
 from models.Volunteer import Volunteer
-from models.User import MANAGEMENT_PARTICIPANT, User
+from models.User import MANAGEMENT_PARTICIPANT, VOLUNTEER_PARTICIPANT, User
 from main import app
-from schemas.volunteer import VolunteerDetailResponse
+from schemas.volunteer import VolunteerDetailResponse, VolunteerUserResponse
 from settings import FILE_STORAGE_PATH
 
 
@@ -63,7 +63,7 @@ class TestVolunteer(IsolatedAsyncioTestCase):
             twitter_username="http://x.com/johndoe",
             share_my_public_social_media=False,
         )
-        self.db.add(user_1)
+        self.db.add(user_2)
         volunteer2 = Volunteer(
             user=user_2,
         )
@@ -431,6 +431,86 @@ class TestVolunteer(IsolatedAsyncioTestCase):
 
         # Expect 2
         self.assertEqual(response.status_code, 200)
+
+    async def test_user_volunteer(self):
+        # Given
+        user_management = User(
+            id="123e4567-e89b-12d3-a456-426614174000",
+            username="admin",
+            participant_type=MANAGEMENT_PARTICIPANT,
+        )
+        self.db.add(user_management)
+        user_1 = User(
+            username="John Doe",
+            first_name="John",
+            last_name="Doe",
+            bio="A keynote volunteer",
+            profile_picture="http://example.com/photo.jpg",
+            email="john@pycon.id",
+            instagram_username="http://instagram.com/johndoe",
+            twitter_username="http://x.com/johndoe",
+            share_my_public_social_media=True,
+            participant_type=VOLUNTEER_PARTICIPANT,
+        )
+        self.db.add(user_1)
+        volunteer1 = Volunteer(
+            user=user_1,
+        )
+        self.db.add(volunteer1)
+        self.db.commit()
+        user_2 = User(
+            username="Jane Doe",
+            first_name="Jane",
+            last_name="Doe",
+            bio="A keynote volunteer",
+            profile_picture="http://example.com/photo.jpg",
+            email="jane@pycon.id",
+            instagram_username="http://instagram.com/johndoe",
+            twitter_username="http://x.com/johndoe",
+            share_my_public_social_media=False,
+            participant_type=VOLUNTEER_PARTICIPANT,
+        )
+        self.db.add(user_2)
+        user_3 = User(
+            username="hello world",
+            first_name="hello",
+            last_name="world",
+            bio="A keynote volunteer",
+            profile_picture="http://example.com/photo.jpg",
+            email="helloworld@pycon.id",
+            instagram_username="http://instagram.com/johndoe",
+            twitter_username="http://x.com/johndoe",
+            share_my_public_social_media=False,
+            participant_type=MANAGEMENT_PARTICIPANT,
+        )
+        self.db.add(user_3)
+        self.db.commit()
+        (token, _) = await generate_token_from_user(db=self.db, user=user_management)
+        app.dependency_overrides[get_db_sync] = get_db_sync_for_test(db=self.db)
+        client = TestClient(app)
+
+        # When
+        response = client.get(
+            "/volunteer/user/",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+        # Expect
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(
+            response.json(),
+            VolunteerUserResponse(
+                results=[
+                    VolunteerUserResponse.DetailUser(
+                        id=str(user_2.id),
+                        username=user_2.username,
+                        first_name=user_2.first_name,
+                        last_name=user_2.last_name,
+                        email=user_2.email,
+                    )
+                ]
+            ).model_dump(),
+        )
 
     def tearDown(self):
         self.db.close()

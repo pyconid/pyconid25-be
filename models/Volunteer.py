@@ -26,4 +26,4 @@ class Volunteer(Base):
     )
 
     # Relationships
-    user = relationship("User", backref="volunteer_user")
+    user = relationship("User", back_populates="volunteer", foreign_keys=[user_id])
