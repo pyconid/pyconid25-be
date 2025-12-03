@@ -452,8 +452,8 @@ class TestSpeaker(IsolatedAsyncioTestCase):
         self.assertIn("results", body)
         self.assertEqual(len(body["results"]), 2)
 
-        usernames = {s["user"]["username"] for s in body["results"]}
-        self.assertSetEqual(usernames, {"public_user_1", "public_user_2"})
+        usernames = {s["user"]["first_name"] for s in body["results"]}
+        self.assertSetEqual(usernames, {"Alice", "Bob"})
 
     async def test_get_schedule_by_speaker(self):
         # Given

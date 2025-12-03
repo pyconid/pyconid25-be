@@ -86,7 +86,6 @@ class StreamInfo(BaseModel):
 
 class PublicSpeakerUser(BaseModel):
     id: UUID
-    username: str
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     email: Optional[str] = None
