@@ -97,6 +97,7 @@ def get_all_speakers_public(db: Session) -> List[Speaker]:
         select(Speaker)
         .options(
             joinedload(Speaker.user),
+            joinedload(Speaker.speaker_type),
         )
         .order_by(Speaker.speaker_type_id)
     )
