@@ -78,3 +78,14 @@ class UpdateVolunteerResponse(BaseModel):
     user_id: str
     created_at: Optional[str] = None
     updated_at: Optional[str] = None
+
+
+class VolunteerUserResponse(BaseModel):
+    class DetailUser(BaseModel):
+        id: str
+        username: str
+        first_name: Optional[str] = None
+        last_name: Optional[str] = None
+        email: Optional[str] = None
+
+    results: List[DetailUser]

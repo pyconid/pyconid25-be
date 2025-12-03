@@ -3,6 +3,7 @@ from models import Base
 from sqlalchemy import UUID, DateTime, String, Boolean, Integer, ForeignKey
 from sqlalchemy.orm import mapped_column, Mapped, relationship
 
+VOLUNTEER_PARTICIPANT = "Volunteer"
 MANAGEMENT_PARTICIPANT = "Management"
 
 
@@ -153,3 +154,5 @@ class User(Base):
         backref="attendance_day_2_updates",
         lazy="joined",
     )
+
+    volunteer = relationship("Volunteer", back_populates="user")
