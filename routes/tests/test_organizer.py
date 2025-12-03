@@ -11,7 +11,6 @@ from models.Organizer import Organizer
 from models.OrganizerType import OrganizerType
 from models.User import MANAGEMENT_PARTICIPANT, User
 from main import app
-from schemas.organizer import OrganizerDetailResponse
 from settings import FILE_STORAGE_PATH
 
 
