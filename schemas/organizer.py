@@ -4,13 +4,10 @@ from typing import Optional, Literal, Sequence
 from fastapi import Query
 from models.Organizer import Organizer
 from models.OrganizerType import OrganizerType
-
+from models.User import User
 
 class OrganizerQuery(BaseModel):
-    page: int = Query(1, description="Page Number")
-    page_size: int = Query(1, description="Page Size")
-    search: Optional[str] = Query(None, description="Search by speaker name")
-    all: Optional[bool] = Query(None, description="Return all speaker if true")
+    search: Optional[str] = Query(None, description="Search by organizer name")
     order_dir: Literal["asc", "desc"] = Query(
         "asc", description="Order direction: asc or desc"
     )
@@ -24,6 +21,9 @@ class OrganizerDetailUser(BaseModel):
     bio: str | None = None
     profile_picture: str | None = None
     email: str | None = None
+    website: str | None = None
+    facebook_username: str | None = None
+    linkedin_username: str | None = None
     instagram_username: str | None = None
     twitter_username: str | None = None
 
@@ -37,9 +37,10 @@ class OrganizerDetailResponse(BaseModel):
     id: str
     user: OrganizerDetailUser
     organizer_type: OrganizerDetailType
-    created_at: str | None = None
-    updated_at: str | None = None
+ 
 
+class OrganizerDetailResponseList(BaseModel):
+    results: list[OrganizerDetailResponse]
 
 class OrganizerCreateRequest(BaseModel):
     user_id: str
@@ -66,6 +67,8 @@ class OrganizersByType(BaseModel):
 
 class OrganizersByTypeAll(BaseModel):
     results: list[OrganizersByType]
+    
+
 
 
 def organizer_response_item_from_model(organizer: Organizer) -> OrganizerResponseItem:
@@ -80,7 +83,7 @@ def organizer_response_item_from_model(organizer: Organizer) -> OrganizerRespons
     
 def organizer_detail_user_from_model(organizer: Organizer) -> OrganizerDetailUser:
     """Convert Organizer ORM model to OrganizerDetailUser Pydantic model."""
-    user = organizer.user
+    user:User = organizer.user
     return OrganizerDetailUser(
         id=str(user.id),
         first_name=user.first_name,
@@ -91,6 +94,9 @@ def organizer_detail_user_from_model(organizer: Organizer) -> OrganizerDetailUse
         email=user.email,
         instagram_username=user.instagram_username,
         twitter_username=user.twitter_username,
+        facebook_username=user.facebook_username,
+        linkedin_username=user.linkedin_username,
+        website=user.website,
     )
 
 def organizer_detail_response_from_model(organizer: Organizer) -> OrganizerDetailResponse:
@@ -103,10 +109,16 @@ def organizer_detail_response_from_model(organizer: Organizer) -> OrganizerDetai
             id=str(organizer_type.id),
             name=organizer_type.name,
         ),
-        created_at=organizer.created_at.isoformat() if organizer.created_at else None,
-        updated_at=organizer.updated_at.isoformat() if organizer.updated_at else None,
     )
     
+def organizer_detail_response_list_from_models(organizers: Sequence[Organizer]) -> OrganizerDetailResponseList:
+    """Convert list of Organizer ORM models to OrganizerDetailResponseList Pydantic model."""
+    return OrganizerDetailResponseList(
+        results=[
+            organizer_detail_response_from_model(org)
+            for org in organizers
+        ],
+    )
     
 def organizers_by_type_response_from_models(organizer_type:OrganizerType, organizers: Sequence[Organizer]) -> OrganizersByType:
     """Convert OrganizerType and list of Organizer ORM models to OrganizersByType Pydantic model."""
