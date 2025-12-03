@@ -91,7 +91,7 @@ def organizer_detail_user_from_model(organizer: Organizer) -> OrganizerDetailUse
         first_name=user.first_name,
         last_name=user.last_name,
         username=user.username,
-        bio=user.bio ,
+        bio=user.bio,
         profile_picture=user.profile_picture,
         email=user.email if user.share_my_email_and_phone_number else None,
         website=user.website if user.share_my_public_social_media else None,
