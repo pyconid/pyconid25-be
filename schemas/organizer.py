@@ -85,19 +85,28 @@ def organizer_response_item_from_model(organizer: Organizer) -> OrganizerRespons
 def organizer_detail_user_from_model(organizer: Organizer) -> OrganizerDetailUser:
     """Convert Organizer ORM model to OrganizerDetailUser Pydantic model."""
     user: User = organizer.user
+
     return OrganizerDetailUser(
         id=str(user.id),
         first_name=user.first_name,
         last_name=user.last_name,
         username=user.username,
-        bio=user.bio,
+        bio=user.bio ,
         profile_picture=user.profile_picture,
-        email=user.email,
-        instagram_username=user.instagram_username,
-        twitter_username=user.twitter_username,
-        facebook_username=user.facebook_username,
-        linkedin_username=user.linkedin_username,
-        website=user.website,
+        email=user.email if user.share_my_email_and_phone_number else None,
+        website=user.website if user.share_my_public_social_media else None,
+        facebook_username=user.facebook_username
+        if user.share_my_public_social_media
+        else None,
+        linkedin_username=user.linkedin_username
+        if user.share_my_public_social_media
+        else None,
+        instagram_username=user.instagram_username
+        if user.share_my_public_social_media
+        else None,
+        twitter_username=user.twitter_username
+        if user.share_my_public_social_media
+        else None,
     )
 
 
