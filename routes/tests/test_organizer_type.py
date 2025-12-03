@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 from models import engine, db, get_db_sync, get_db_sync_for_test
 from models.OrganizerType import OrganizerType
 from main import app
-from schemas.organizer_type import OrganizerTypeAllResponse, organizer_type_all_response_from_models
+from schemas.organizer_type import  organizer_type_all_response_from_models
 
 
 class TestOrganizerType(IsolatedAsyncioTestCase):

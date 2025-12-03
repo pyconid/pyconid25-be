@@ -13,6 +13,7 @@ from core.responses import (
     Unauthorized,
     common_response,
 )
+
 from core.security import check_permissions, get_current_user
 from models import get_db_sync
 from models.User import MANAGEMENT_PARTICIPANT, User
@@ -25,7 +26,7 @@ from repository.organizer import (
     update_organizer_data,
     get_all_organizers,
     get_organizer_by_type,
-    organizers_by_type_response_from_models
+    organizers_by_type_response_from_models,
 )
 from repository.organizer_type import get_organizer_type_by_id
 from repository.user import get_user_by_id
@@ -37,12 +38,34 @@ from schemas.organizer import (
     organizer_response_item_from_model,
     organizer_detail_response_list_from_models,
     OrganizerQuery,
+    OrganizerDetailResponseList,
+    OrganizersByTypeAll,
+    OrganizersByType,
+    OrganizerResponseItem,
+    OrganizerDetailResponse,
+)
+from schemas.common import (
+    InternalServerErrorResponse,
+    BadRequestResponse,
+    UnauthorizedResponse,
+    NotFoundResponse,
+    ForbiddenResponse,
+    OkResponse,
 )
 
 router = APIRouter(prefix="/organizer", tags=["Organizer"])
 
 
-@router.get("/type")
+@router.get(
+    "/type",
+    responses={
+        "200": {"model": OrganizersByTypeAll},
+        "401": {"model": UnauthorizedResponse},
+        "403": {"model": ForbiddenResponse},
+        "404": {"model": NotFoundResponse},
+        "500": {"model": InternalServerErrorResponse},
+    },
+)
 def get_organizers_grouped_by_type(
     db: Session = Depends(get_db_sync),
     current_user: User | None = Depends(get_current_user),
@@ -65,7 +88,15 @@ def get_organizers_grouped_by_type(
         logger.error(f"Error fetching organizers by type: {e}")
         return common_response(InternalServerError(error=str(e)))
 
-@router.get("/public")
+
+@router.get(
+    "/public",
+    responses={
+        "200": {"model": OrganizerDetailResponseList},
+        "404": {"model": NotFoundResponse},
+        "500": {"model": InternalServerErrorResponse},
+    },
+)
 def get_organizers_public(
     db: Session = Depends(get_db_sync),
     query: OrganizerQuery = Depends(),
@@ -83,7 +114,16 @@ def get_organizers_public(
         return common_response(InternalServerError(error=str(e)))
 
 
-@router.get("/")
+@router.get(
+    "/",
+    responses={
+        "200": {"model": OrganizerDetailResponseList},
+        "401": {"model": UnauthorizedResponse},
+        "403": {"model": ForbiddenResponse},
+        "404": {"model": NotFoundResponse},
+        "500": {"model": InternalServerErrorResponse},
+    },
+)
 def get_organizers(
     db: Session = Depends(get_db_sync),
     query: OrganizerQuery = Depends(),
@@ -108,7 +148,17 @@ def get_organizers(
         logger.error(f"Error fetching organizers by type: {e}")
         return common_response(InternalServerError(error=str(e)))
 
-@router.get("/type/{organizer_type_id}")
+
+@router.get(
+    "/type/{organizer_type_id}",
+    responses={
+        "200": {"model": OrganizersByType},
+        "401": {"model": UnauthorizedResponse},
+        "403": {"model": ForbiddenResponse},
+        "404": {"model": NotFoundResponse},
+        "500": {"model": InternalServerErrorResponse},
+    },
+)
 def find_organizer_by_type(
     organizer_type_id: str,
     db: Session = Depends(get_db_sync),
@@ -131,13 +181,26 @@ def find_organizer_by_type(
         if data is None:
             return common_response(NotFound(message="No organizers found"))
 
-        model_data = organizers_by_type_response_from_models(organizer_type=orgnizer_type, organizers=data)
+        model_data = organizers_by_type_response_from_models(
+            organizer_type=orgnizer_type, organizers=data
+        )
         return common_response(Ok(data=model_data.model_dump()))
     except Exception as e:
         logger.error(f"Error fetching organizers by type: {e}")
         return common_response(InternalServerError(error=str(e)))
 
-@router.post("/")
+
+@router.post(
+    "/",
+    responses={
+        "200": {"model": OrganizerResponseItem},
+        "400": {"model": BadRequestResponse},
+        "401": {"model": UnauthorizedResponse},
+        "403": {"model": ForbiddenResponse},
+        "404": {"model": NotFoundResponse},
+        "500": {"model": InternalServerErrorResponse},
+    },
+)
 def create_organizer(
     create_request: OrganizerCreateRequest,
     db: Session = Depends(get_db_sync),
@@ -189,7 +252,16 @@ def create_organizer(
         return common_response(InternalServerError(error=str(e)))
 
 
-@router.get("/{organizer_id}")
+@router.get(
+    "/{organizer_id}",
+    responses={
+        "200": {"model": OrganizerDetailResponse},
+        "401": {"model": UnauthorizedResponse},
+        "403": {"model": ForbiddenResponse},
+        "404": {"model": NotFoundResponse},
+        "500": {"model": InternalServerErrorResponse},
+    },
+)
 def find_organizer_by_id(
     organizer_id: str,
     db: Session = Depends(get_db_sync),
@@ -215,7 +287,17 @@ def find_organizer_by_id(
         return common_response(InternalServerError(error=str(e)))
 
 
-@router.put("/{organizer_id}")
+@router.put(
+    "/{organizer_id}",
+    responses={
+        "200": {"model": OrganizerDetailResponse},
+        "400": {"model": BadRequestResponse},
+        "401": {"model": UnauthorizedResponse},
+        "403": {"model": ForbiddenResponse},
+        "404": {"model": NotFoundResponse},
+        "500": {"model": InternalServerErrorResponse},
+    },
+)
 def update_organizer_by_id(
     organizer_id: str,
     payload: OrganizerUpdateRequest,
@@ -269,7 +351,16 @@ def update_organizer_by_id(
         return common_response(InternalServerError(error=str(e)))
 
 
-@router.delete("/{organizer_id}")
+@router.delete(
+    "/{organizer_id}",
+    responses={
+        "200": {"model": OkResponse},
+        "401": {"model": UnauthorizedResponse},
+        "403": {"model": ForbiddenResponse},
+        "404": {"model": NotFoundResponse},
+        "500": {"model": InternalServerErrorResponse},
+    },
+)
 def delete_organizer(
     organizer_id: str,
     db: Session = Depends(get_db_sync),
@@ -296,7 +387,16 @@ def delete_organizer(
         return common_response(InternalServerError(error=str(e)))
 
 
-@router.get("/{organizer_id}/profile-picture", response_class=FileResponse)
+@router.get(
+    "/{organizer_id}/profile-picture",
+    response_class=FileResponse,
+    responses={
+        "401": {"model": UnauthorizedResponse},
+        "403": {"model": ForbiddenResponse},
+        "404": {"model": NotFoundResponse},
+        "500": {"model": InternalServerErrorResponse},
+    },
+)
 def get_organizer_profile_picture(
     organizer_id: str, db: Session = Depends(get_db_sync)
 ):
