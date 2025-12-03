@@ -1,12 +1,49 @@
 import traceback
-from schemas.common import ForbiddenResponse
-from models.User import MANAGEMENT_PARTICIPANT
-from core.responses import Forbidden
-from schemas.common import BadRequestResponse
-from core.responses import BadRequest
-from core.log import logger
 from uuid import UUID
+
 from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
+
+from core.log import logger
+from core.mux_service import mux_service
+from core.responses import (
+    BadRequest,
+    Created,
+    Forbidden,
+    InternalServerError,
+    NoContent,
+    NotFound,
+    Ok,
+    Unauthorized,
+    common_response,
+)
+from core.security import get_user_from_token, oauth2_scheme
+from models import get_db_sync
+from models.Stream import StreamStatus
+from models.User import MANAGEMENT_PARTICIPANT
+from repository import (
+    room as roomRepo,
+)
+from repository import (
+    schedule as scheduleRepo,
+)
+from repository import (
+    schedule_type as scheduleTypeRepo,
+)
+from repository import (
+    speaker as speakerRepo,
+)
+from repository import (
+    streaming as streamingRepo,
+)
+from schemas.common import (
+    BadRequestResponse,
+    ForbiddenResponse,
+    InternalServerErrorResponse,
+    NoContentResponse,
+    NotFoundResponse,
+    UnauthorizedResponse,
+)
 from schemas.schedule import (
     CreateScheduleRequest,
     MuxStreamDetail,
@@ -20,33 +57,6 @@ from schemas.schedule import (
     ScheduleTypeInfo,
     SimplePublicSpeakerInfo,
     UpdateScheduleRequest,
-)
-from sqlalchemy.orm import Session
-from core.responses import (
-    Created,
-    InternalServerError,
-    NoContent,
-    NotFound,
-    Ok,
-    Unauthorized,
-    common_response,
-)
-from core.security import get_user_from_token, oauth2_scheme
-from core.mux_service import mux_service
-from models import get_db_sync
-from models.Stream import StreamStatus
-from schemas.common import (
-    InternalServerErrorResponse,
-    NoContentResponse,
-    NotFoundResponse,
-    UnauthorizedResponse,
-)
-from repository import (
-    schedule as scheduleRepo,
-    streaming as streamingRepo,
-    room as roomRepo,
-    speaker as speakerRepo,
-    schedule_type as scheduleTypeRepo,
 )
 
 router = APIRouter(prefix="/schedule", tags=["Schedule"])
@@ -86,9 +96,21 @@ async def create_schedule(
         if schedule_type is None:
             return common_response(BadRequest(message="Schedule type not found"))
 
-        speaker = speakerRepo.get_speaker_by_id(db=db, id=str(request.speaker_id))
-        if speaker is None:
-            return common_response(BadRequest(message="Speaker not found"))
+        if request.speaker_id is not None:
+            speaker = speakerRepo.get_speaker_by_id(db=db, id=str(request.speaker_id))
+            if speaker is None:
+                return common_response(BadRequest(message="Speaker not found"))
+
+            is_speaker_already_scheduled = scheduleRepo.is_speaker_already_scheduled(
+                db=db,
+                speaker_id=request.speaker_id,
+            )
+            if is_speaker_already_scheduled:
+                return common_response(
+                    BadRequest(
+                        message="Speaker is already scheduled for another session"
+                    )
+                )
 
         # Create schedule
         schedule = scheduleRepo.create_schedule(
@@ -187,7 +209,11 @@ async def get_schedule_cms(
                         ScheduleCMSResponseItem(
                             id=str(r.id),
                             title=r.title,
-                            speaker=SimplePublicSpeakerInfo.model_validate(r.speaker),
+                            speaker=(
+                                SimplePublicSpeakerInfo.model_validate(r.speaker)
+                                if r.speaker is not None
+                                else None
+                            ),
                             room=RoomInfo.model_validate(r.room),
                             schedule_type=ScheduleTypeInfo.model_validate(
                                 r.schedule_type
@@ -231,48 +257,51 @@ async def get_schedule_by_id(
             mode="json"
         )
 
-        # Filter user data based on privacy settings
-        user = schedule.speaker.user
-        user_dict = schedule_dict["speaker"]["user"]
+        if schedule.speaker is not None:
+            # Filter user data based on privacy settings
+            user = schedule.speaker.user
+            user_dict = schedule_dict["speaker"]["user"]
 
-        filtered_user = {
-            "id": user_dict["id"],
-            "username": user_dict["username"],
-            "first_name": user_dict.get("first_name"),
-            "last_name": user_dict.get("last_name"),
-            "bio": user_dict.get("bio"),
-        }
+            filtered_user = {
+                "id": user_dict["id"],
+                "username": user_dict["username"],
+                "first_name": user_dict.get("first_name"),
+                "last_name": user_dict.get("last_name"),
+                "bio": user_dict.get("bio"),
+            }
 
-        if user.share_my_email_and_phone_number:
-            filtered_user["email"] = user_dict.get("email")
-            # filtered_user["phone"] = user_dict.get("phone")
-        else:
-            filtered_user["email"] = None
-            # filtered_user["phone"] = None
+            if user.share_my_email_and_phone_number:
+                filtered_user["email"] = user_dict.get("email")
+                # filtered_user["phone"] = user_dict.get("phone")
+            else:
+                filtered_user["email"] = None
+                # filtered_user["phone"] = None
 
-        if user.share_my_job_and_company:
-            filtered_user["company"] = user_dict.get("company")
-            filtered_user["job_category"] = user_dict.get("job_category")
-            filtered_user["job_title"] = user_dict.get("job_title")
-        else:
-            filtered_user["company"] = None
-            filtered_user["job_category"] = None
-            filtered_user["job_title"] = None
+            if user.share_my_job_and_company:
+                filtered_user["company"] = user_dict.get("company")
+                filtered_user["job_category"] = user_dict.get("job_category")
+                filtered_user["job_title"] = user_dict.get("job_title")
+            else:
+                filtered_user["company"] = None
+                filtered_user["job_category"] = None
+                filtered_user["job_title"] = None
 
-        if user.share_my_public_social_media:
-            filtered_user["website"] = user_dict.get("website")
-            filtered_user["facebook_username"] = user_dict.get("facebook_username")
-            filtered_user["linkedin_username"] = user_dict.get("linkedin_username")
-            filtered_user["twitter_username"] = user_dict.get("twitter_username")
-            filtered_user["instagram_username"] = user_dict.get("instagram_username")
-        else:
-            filtered_user["website"] = None
-            filtered_user["facebook_username"] = None
-            filtered_user["linkedin_username"] = None
-            filtered_user["twitter_username"] = None
-            filtered_user["instagram_username"] = None
+            if user.share_my_public_social_media:
+                filtered_user["website"] = user_dict.get("website")
+                filtered_user["facebook_username"] = user_dict.get("facebook_username")
+                filtered_user["linkedin_username"] = user_dict.get("linkedin_username")
+                filtered_user["twitter_username"] = user_dict.get("twitter_username")
+                filtered_user["instagram_username"] = user_dict.get(
+                    "instagram_username"
+                )
+            else:
+                filtered_user["website"] = None
+                filtered_user["facebook_username"] = None
+                filtered_user["linkedin_username"] = None
+                filtered_user["twitter_username"] = None
+                filtered_user["instagram_username"] = None
 
-        schedule_dict["speaker"]["user"] = filtered_user
+            schedule_dict["speaker"]["user"] = filtered_user
 
         return common_response(Ok(data=schedule_dict))
     except Exception as e:
@@ -364,10 +393,21 @@ async def update_schedule(
             if schedule_type is None:
                 return common_response(BadRequest(message="Schedule type not found"))
 
-        if request.speaker_id != schedule.speaker_id:
+        if request.speaker_id and request.speaker_id != schedule.speaker_id:
             speaker = speakerRepo.get_speaker_by_id(db=db, id=str(request.speaker_id))
             if speaker is None:
                 return common_response(BadRequest(message="Speaker not found"))
+
+            is_speaker_already_scheduled = scheduleRepo.is_speaker_already_scheduled(
+                db=db,
+                speaker_id=request.speaker_id,
+            )
+            if is_speaker_already_scheduled:
+                return common_response(
+                    BadRequest(
+                        message="Speaker is already scheduled for another session"
+                    )
+                )
 
         start_time = schedule.start
         if request.start is not None:

@@ -1,6 +1,7 @@
-from models.ScheduleType import ScheduleType
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+
+from models.ScheduleType import ScheduleType
 
 
 def initial_schedule_type(db: Session, is_commit: bool = True):
@@ -8,7 +9,8 @@ def initial_schedule_type(db: Session, is_commit: bool = True):
         ScheduleType(id="019ab02c-7f07-7b9d-b803-a003f2c307f2", name="Keynote Talk"),
         ScheduleType(id="019ab02c-9e20-79ed-bc9e-d5b8dcd70beb", name="Regular Talk"),
         ScheduleType(id="019ab02c-ba54-72e8-b8c0-540951a6dfe7", name="Short Talk"),
-        ScheduleType(id="019ab02c-d4cf-7c11-8406-0d5788f2314f", name="Open discusion"),
+        ScheduleType(id="019add63-842a-7814-810b-bce18978aeb4", name="Open Session"),
+        ScheduleType(id="019add63-aa2b-7cd1-9fe5-beab973b926f", name="Closed Session"),
     ]
 
     for schedule_type in schedule_types:
