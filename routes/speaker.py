@@ -176,6 +176,9 @@ async def get_schedule_by_speaker(
             )
         )
     except Exception as e:
+        import traceback
+
+        traceback.print_exc()
         logger.error(f"Failed to get schedule by id {id}: {e}")
         return common_response(InternalServerError(error=str(e)))
 
