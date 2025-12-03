@@ -39,6 +39,15 @@ def get_volunteer_by_id(db: Session, id: str) -> Optional[Volunteer]:
     return db.execute(stmt).scalar()
 
 
+def get_volunteer_by_user_id(
+    db: Session, user_id: str, exclude_user_id: Optional[str] = None
+) -> Optional[Volunteer]:
+    stmt = select(Volunteer).where(Volunteer.user_id == user_id)
+    if exclude_user_id:
+        stmt = stmt.where(Volunteer.user_id != exclude_user_id)
+    return db.execute(stmt).scalar()
+
+
 def create_volunteer(
     db: Session,
     user: User,

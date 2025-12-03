@@ -243,6 +243,14 @@ async def create_volunteer(
             BadRequest(message=f"User with id {request.user_id} not found")
         )
 
+    volunteer = volunteerRepo.get_volunteer_by_user_id(db=db, user_id=request.user_id)
+    if volunteer is not None:
+        return common_response(
+            BadRequest(
+                message=f"Volunteer for user id {request.user_id} already exists"
+            )
+        )
+
     now = datetime.now().astimezone(timezone("Asia/Jakarta"))
     new_volunteer = volunteerRepo.create_volunteer(
         db=db,
@@ -298,6 +306,16 @@ async def update_volunteer(
     if user is None:
         return common_response(
             BadRequest(message=f"User with id {request.user_id} not found")
+        )
+
+    volunteer = volunteerRepo.get_volunteer_by_user_id(
+        db=db, user_id=request.user_id, exclude_user_id=existing_volunteer.user_id
+    )
+    if volunteer is not None:
+        return common_response(
+            BadRequest(
+                message=f"Volunteer for user id {request.user_id} already exists"
+            )
         )
 
     updated_volunteer = volunteerRepo.update_volunteer(
