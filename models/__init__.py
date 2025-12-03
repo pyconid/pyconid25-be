@@ -69,3 +69,4 @@ from models.Speaker import Speaker  # NOQA
 from models.Voucher import Voucher  # NOQA
 from models.Stream import Stream  # NOQA
 from models.SpeakerType import SpeakerType  # NOQA
+from models.Volunteer import Volunteer  # NOQA
