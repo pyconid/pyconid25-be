@@ -3,8 +3,10 @@ from pydantic import BaseModel, ConfigDict
 
 NoContentResponse = None
 
+
 class OkResponse(BaseModel):
     message: str = "Ok"
+
 
 class UnauthorizedResponse(BaseModel):
     message: str = "Unauthorized"

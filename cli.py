@@ -28,14 +28,16 @@ def create_management_user():
             is_active=True,
             is_commit=True,
         )
-        
+
+
 @app.command()
 def create_initial_organizer_types():
     from models import factory_session
     from repository.organizer_type import insert_initial_organizer_types
-    
+
     with factory_session() as db:
         insert_initial_organizer_types(db=db)
+
 
 @app.command()
 def initial_data():

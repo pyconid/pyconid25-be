@@ -6,6 +6,7 @@ from models.Organizer import Organizer
 from models.OrganizerType import OrganizerType
 from models.User import User
 
+
 class OrganizerQuery(BaseModel):
     search: Optional[str] = Query(None, description="Search by organizer name")
     order_dir: Literal["asc", "desc"] = Query(
@@ -37,10 +38,11 @@ class OrganizerDetailResponse(BaseModel):
     id: str
     user: OrganizerDetailUser
     organizer_type: OrganizerDetailType
- 
+
 
 class OrganizerDetailResponseList(BaseModel):
     results: list[OrganizerDetailResponse]
+
 
 class OrganizerCreateRequest(BaseModel):
     user_id: str
@@ -67,8 +69,6 @@ class OrganizersByType(BaseModel):
 
 class OrganizersByTypeAll(BaseModel):
     results: list[OrganizersByType]
-    
-
 
 
 def organizer_response_item_from_model(organizer: Organizer) -> OrganizerResponseItem:
@@ -80,10 +80,11 @@ def organizer_response_item_from_model(organizer: Organizer) -> OrganizerRespons
         created_at=organizer.created_at.isoformat() if organizer.created_at else None,
         updated_at=organizer.updated_at.isoformat() if organizer.updated_at else None,
     )
-    
+
+
 def organizer_detail_user_from_model(organizer: Organizer) -> OrganizerDetailUser:
     """Convert Organizer ORM model to OrganizerDetailUser Pydantic model."""
-    user:User = organizer.user
+    user: User = organizer.user
     return OrganizerDetailUser(
         id=str(user.id),
         first_name=user.first_name,
@@ -99,7 +100,10 @@ def organizer_detail_user_from_model(organizer: Organizer) -> OrganizerDetailUse
         website=user.website,
     )
 
-def organizer_detail_response_from_model(organizer: Organizer) -> OrganizerDetailResponse:
+
+def organizer_detail_response_from_model(
+    organizer: Organizer,
+) -> OrganizerDetailResponse:
     """Convert Organizer ORM model to OrganizerDetailResponse Pydantic model."""
     organizer_type = organizer.organizer_type
     return OrganizerDetailResponse(
@@ -110,26 +114,25 @@ def organizer_detail_response_from_model(organizer: Organizer) -> OrganizerDetai
             name=organizer_type.name,
         ),
     )
-    
-def organizer_detail_response_list_from_models(organizers: Sequence[Organizer]) -> OrganizerDetailResponseList:
+
+
+def organizer_detail_response_list_from_models(
+    organizers: Sequence[Organizer],
+) -> OrganizerDetailResponseList:
     """Convert list of Organizer ORM models to OrganizerDetailResponseList Pydantic model."""
     return OrganizerDetailResponseList(
-        results=[
-            organizer_detail_response_from_model(org)
-            for org in organizers
-        ],
+        results=[organizer_detail_response_from_model(org) for org in organizers],
     )
-    
-def organizers_by_type_response_from_models(organizer_type:OrganizerType, organizers: Sequence[Organizer]) -> OrganizersByType:
+
+
+def organizers_by_type_response_from_models(
+    organizer_type: OrganizerType, organizers: Sequence[Organizer]
+) -> OrganizersByType:
     """Convert OrganizerType and list of Organizer ORM models to OrganizersByType Pydantic model."""
     return OrganizersByType(
         organizer_type=OrganizerDetailType(
             id=str(organizer_type.id),
             name=organizer_type.name,
         ),
-        organizers=[
-            organizer_detail_user_from_model(org)
-            for org in organizers
-        ],
+        organizers=[organizer_detail_user_from_model(org) for org in organizers],
     )
-

@@ -56,7 +56,7 @@ class TestOrganizer(IsolatedAsyncioTestCase):
         )
         self.db.add(organizer1)
         self.db.commit()
-        
+
         user_2 = User(
             username="Jane Organizer",
             first_name="Jane",
@@ -74,7 +74,7 @@ class TestOrganizer(IsolatedAsyncioTestCase):
         )
         self.db.add(organizer2)
         self.db.commit()
-        
+
         (token, _) = await generate_token_from_user(db=self.db, user=user_management)
         app.dependency_overrides[get_db_sync] = get_db_sync_for_test(db=self.db)
         client = TestClient(app)
@@ -120,15 +120,14 @@ class TestOrganizer(IsolatedAsyncioTestCase):
         )
         self.db.add(organizer)
         self.db.commit()
-        
+
         (token, _) = await generate_token_from_user(db=self.db, user=user_management)
         app.dependency_overrides[get_db_sync] = get_db_sync_for_test(db=self.db)
         client = TestClient(app)
 
         # When 1 - Management user can get organizer
         response = client.get(
-            f"/organizer/{organizer.id}", 
-            headers={"Authorization": f"Bearer {token}"}
+            f"/organizer/{organizer.id}", headers={"Authorization": f"Bearer {token}"}
         )
 
         # Expect 1
@@ -140,8 +139,7 @@ class TestOrganizer(IsolatedAsyncioTestCase):
             db=self.db, user=user_non_management
         )
         response = client.get(
-            f"/organizer/{organizer.id}", 
-            headers={"Authorization": f"Bearer {token}"}
+            f"/organizer/{organizer.id}", headers={"Authorization": f"Bearer {token}"}
         )
 
         # Expect 2
@@ -162,7 +160,7 @@ class TestOrganizer(IsolatedAsyncioTestCase):
         organizer_type = OrganizerType(name="Core Team")
         self.db.add(organizer_type)
         self.db.commit()
-        
+
         (token, _) = await generate_token_from_user(db=self.db, user=user_management)
         app.dependency_overrides[get_db_sync] = get_db_sync_for_test(db=self.db)
         client = TestClient(app)
@@ -192,7 +190,7 @@ class TestOrganizer(IsolatedAsyncioTestCase):
         )
         self.db.add(user_another)
         self.db.commit()
-        
+
         (token, _) = await generate_token_from_user(
             db=self.db, user=user_non_management
         )
@@ -228,7 +226,7 @@ class TestOrganizer(IsolatedAsyncioTestCase):
         )
         self.db.add(organizer)
         self.db.commit()
-        
+
         (token, _) = await generate_token_from_user(db=self.db, user=user_management)
         app.dependency_overrides[get_db_sync] = get_db_sync_for_test(db=self.db)
         client = TestClient(app)
@@ -279,7 +277,7 @@ class TestOrganizer(IsolatedAsyncioTestCase):
         )
         self.db.add(organizer)
         self.db.commit()
-        
+
         (token, _) = await generate_token_from_user(db=self.db, user=user_management)
         app.dependency_overrides[get_db_sync] = get_db_sync_for_test(db=self.db)
         client = TestClient(app)
@@ -345,7 +343,7 @@ class TestOrganizer(IsolatedAsyncioTestCase):
         )
         self.db.add(organizer)
         self.db.commit()
-        
+
         (token, _) = await generate_token_from_user(db=self.db, user=user_management)
         app.dependency_overrides[get_db_sync] = get_db_sync_for_test(db=self.db)
         client = TestClient(app)
@@ -431,7 +429,7 @@ class TestOrganizer(IsolatedAsyncioTestCase):
         )
         self.db.add(user_management)
         self.db.commit()
-        
+
         (token, _) = await generate_token_from_user(db=self.db, user=user_management)
         app.dependency_overrides[get_db_sync] = get_db_sync_for_test(db=self.db)
         client = TestClient(app)
@@ -472,7 +470,7 @@ class TestOrganizer(IsolatedAsyncioTestCase):
         )
         self.db.add(organizer)
         self.db.commit()
-        
+
         (token, _) = await generate_token_from_user(db=self.db, user=user_management)
         app.dependency_overrides[get_db_sync] = get_db_sync_for_test(db=self.db)
         client = TestClient(app)
@@ -512,7 +510,7 @@ class TestOrganizer(IsolatedAsyncioTestCase):
         )
         self.db.add(organizer)
         self.db.commit()
-        
+
         app.dependency_overrides[get_db_sync] = get_db_sync_for_test(db=self.db)
         client = TestClient(app)
 

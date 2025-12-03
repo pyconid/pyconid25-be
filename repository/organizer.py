@@ -61,9 +61,11 @@ def get_organizer_by_id(db: Session, id: str) -> Organizer | None:
     stmt = select(Organizer).where(Organizer.id == id)
     return db.execute(stmt).scalar()
 
+
 def get_organizer_by_user_id(db: Session, user_id: str) -> Organizer | None:
     stmt = select(Organizer).where(Organizer.user_id == user_id)
     return db.execute(stmt).scalar()
+
 
 def delete_organizer_data(db: Session, organizer: Organizer) -> None:
     logger.info(f"Deleting organizer with ID: {organizer.id}")
@@ -105,7 +107,10 @@ def get_organizers_by_type(db: Session):
         logger.error(f"Error fetching organizers by type: {e}")
         raise e
 
-def update_organizer_data(db: Session, organizer: Organizer, user: User, organizer_type: OrganizerType) -> Organizer:
+
+def update_organizer_data(
+    db: Session, organizer: Organizer, user: User, organizer_type: OrganizerType
+) -> Organizer:
     now = get_current_time_in_timezone(TZ)
     try:
         organizer.user = user
@@ -119,7 +124,8 @@ def update_organizer_data(db: Session, organizer: Organizer, user: User, organiz
         logger.error(f"Error updating organizer with ID: {organizer.id} - {e}")
         db.rollback()
         raise e
-    
+
+
 def get_all_organizers(
     db: Session, search: str | None = None, order_dir: Literal["asc", "desc"] = "asc"
 ) -> Sequence[Organizer]:
