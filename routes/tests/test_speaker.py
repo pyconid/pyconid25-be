@@ -1,16 +1,21 @@
 import shutil
 import uuid
-import alembic.config
+from datetime import datetime, timedelta
 from unittest import IsolatedAsyncioTestCase
 
+import alembic.config
 from fastapi.testclient import TestClient
 from sqlalchemy import select
+
 from core.security import generate_token_from_user
-from models import engine, db, get_db_sync, get_db_sync_for_test
+from main import app
+from models import db, engine, get_db_sync, get_db_sync_for_test
+from models.Room import Room
+from models.Schedule import Schedule
+from models.ScheduleType import ScheduleType
 from models.Speaker import Speaker
 from models.SpeakerType import SpeakerType
 from models.User import MANAGEMENT_PARTICIPANT, User
-from main import app
 from schemas.speaker import SpeakerDetailResponse
 from settings import FILE_STORAGE_PATH
 
@@ -392,6 +397,127 @@ class TestSpeaker(IsolatedAsyncioTestCase):
 
         # Expect 2
         self.assertEqual(response.status_code, 200)
+
+    async def test_get_speaker_public(self):
+        # Given: 2 speaker
+        st = SpeakerType(name="Public Speaker")
+        self.db.add(st)
+
+        user_1 = User(
+            username="public_user_1",
+            first_name="Alice",
+            last_name="Smith",
+            bio="Public speaker 1",
+            profile_picture="http://example.com/photo1.jpg",
+            email="alice@pycon.id",
+            instagram_username="http://instagram.com/alice",
+            twitter_username="http://x.com/alice",
+        )
+        self.db.add(user_1)
+        speaker1 = Speaker(
+            user=user_1,
+            speaker_type=st,
+        )
+        self.db.add(speaker1)
+
+        user_2 = User(
+            username="public_user_2",
+            first_name="Bob",
+            last_name="Jones",
+            bio="Public speaker 2",
+            profile_picture="http://example.com/photo2.jpg",
+            email="bob@pycon.id",
+            instagram_username="http://instagram.com/bob",
+            twitter_username="http://x.com/bob",
+        )
+        self.db.add(user_2)
+        speaker2 = Speaker(
+            user=user_2,
+            speaker_type=st,
+        )
+        self.db.add(speaker2)
+
+        self.db.commit()
+
+        app.dependency_overrides[get_db_sync] = get_db_sync_for_test(db=self.db)
+        client = TestClient(app)
+
+        # When
+        response = client.get("/speaker/public")
+
+        # Expect
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+
+        self.assertIn("results", body)
+        self.assertEqual(len(body["results"]), 2)
+
+        usernames = {s["user"]["username"] for s in body["results"]}
+        self.assertSetEqual(usernames, {"public_user_1", "public_user_2"})
+
+    async def test_get_schedule_by_speaker(self):
+        # Given
+        st = SpeakerType(name="Schedule Speaker")
+        self.db.add(st)
+
+        user = User(
+            username="schedule_user",
+            first_name="Schedule",
+            last_name="Speaker",
+            bio="Speaker with schedule",
+            profile_picture="http://example.com/photo.jpg",
+            email="schedule@pycon.id",
+            instagram_username="http://instagram.com/schedule",
+            twitter_username="http://x.com/schedule",
+        )
+        self.db.add(user)
+
+        speaker = Speaker(
+            id=uuid.uuid4(),
+            user=user,
+            speaker_type=st,
+        )
+        self.db.add(speaker)
+        self.db.commit()
+
+        app.dependency_overrides[get_db_sync] = get_db_sync_for_test(db=self.db)
+        client = TestClient(app)
+
+        # When: speaker not have schedule
+        response = client.get(f"/speaker/{str(speaker.id)}/schedule/")
+        self.assertEqual(response.status_code, 404)
+
+        # Given: create schedule for speaker
+        start_time = datetime.now() + timedelta(hours=1)
+        end_time = start_time + timedelta(hours=1)
+
+        room = Room(name="Main Hall")
+        self.db.add(room)
+        self.db.flush()
+
+        schedule_type = ScheduleType(name="Talk")
+        self.db.add(schedule_type)
+        self.db.flush()
+
+        schedule = Schedule(
+            id=uuid.uuid4(),
+            title="Opening Keynote",
+            description="Opening session",
+            speaker_id=speaker.id,
+            room_id=room.id,
+            schedule_type_id=schedule_type.id,
+            start=start_time,
+            end=end_time,
+        )
+        self.db.add(schedule)
+        self.db.commit()
+
+        response = client.get(f"/speaker/{str(speaker.id)}/schedule/")
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+
+        self.assertEqual(str(schedule.id), body["id"])
+        self.assertEqual(schedule.title, body["title"])
 
     def tearDown(self):
         self.db.close()
