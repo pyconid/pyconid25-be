@@ -67,7 +67,6 @@ app.include_router(schedule_type_router)
 app.include_router(volunteer_router)
 
 
-
 @app.exception_handler(ValidationError)
 async def pydantic_validation_exception_handler(request: Request, exc: ValidationError):
     # Logikanya hampir sama, hanya cara mengambil detail errornya sedikit berbeda
