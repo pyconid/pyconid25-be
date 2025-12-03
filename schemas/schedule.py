@@ -1,11 +1,12 @@
-from models.Stream import StreamStatus
-from datetime import datetime, date
+from datetime import date, datetime
+from enum import Enum
 from typing import List, Optional
 from uuid import UUID
-from enum import Enum
+
 from fastapi import Query
 from pydantic import BaseModel, model_validator
 
+from models.Stream import StreamStatus
 from schemas.speaker_type import DetailSpeakerResponse
 
 
@@ -24,7 +25,7 @@ class ScheduleQuery(BaseModel):
 
 class CreateScheduleRequest(BaseModel):
     title: str
-    speaker_id: UUID
+    speaker_id: Optional[UUID] = None
     room_id: UUID
     schedule_type_id: UUID
     description: Optional[str] = None
@@ -44,7 +45,7 @@ class CreateScheduleRequest(BaseModel):
 
 class UpdateScheduleRequest(BaseModel):
     title: str
-    speaker_id: UUID
+    speaker_id: Optional[UUID] = None
     room_id: UUID
     schedule_type_id: UUID
     description: Optional[str] = None
@@ -113,7 +114,7 @@ class PublicSpeakerInfo(BaseModel):
 class PublicScheduleDetail(BaseModel):
     id: UUID
     title: str
-    speaker: PublicSpeakerInfo
+    speaker: Optional[PublicSpeakerInfo] = None
     room: RoomInfo
     schedule_type: ScheduleTypeInfo
     description: Optional[str] = None
@@ -149,7 +150,7 @@ class SimplePublicSpeakerInfo(BaseModel):
 class ScheduleDetail(BaseModel):
     id: UUID
     title: str
-    speaker: SimplePublicSpeakerInfo
+    speaker: Optional[SimplePublicSpeakerInfo] = None
     room: RoomInfo
     schedule_type: ScheduleTypeInfo
     description: Optional[str] = None
@@ -169,7 +170,9 @@ class ScheduleDetail(BaseModel):
 class ScheduleResponseItem(BaseModel):
     id: UUID
     title: str
-    speaker: SimplePublicSpeakerInfo
+    speaker: Optional[SimplePublicSpeakerInfo] = None
+    room: RoomInfo
+    schedule_type: ScheduleTypeInfo
     presentation_language: Optional[Language] = None
     tags: Optional[List[str]] = None
     start: datetime
@@ -199,7 +202,7 @@ class MuxStreamDetail(BaseModel):
 class ScheduleCMSResponseItem(BaseModel):
     id: str
     title: str
-    speaker: SimplePublicSpeakerInfo
+    speaker: Optional[SimplePublicSpeakerInfo] = None
     room: RoomInfo
     schedule_type: ScheduleTypeInfo
     stream_key: Optional[str] = None

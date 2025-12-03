@@ -1,10 +1,12 @@
-from typing import List
 import datetime
 import uuid
-from models import Base
+from typing import List
+
 from sqlalchemy import UUID, DateTime, ForeignKey, String
-from sqlalchemy.orm import mapped_column, Mapped, relationship
 from sqlalchemy.dialects.postgresql import ARRAY
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from models import Base
 
 
 class Schedule(Base):
@@ -14,7 +16,11 @@ class Schedule(Base):
         "id", UUID(as_uuid=True), primary_key=True, index=True, default=uuid.uuid4
     )
     speaker_id: Mapped[str] = mapped_column(
-        "speaker_id", UUID(as_uuid=True), ForeignKey("speaker.id"), index=True
+        "speaker_id",
+        UUID(as_uuid=True),
+        ForeignKey("speaker.id"),
+        index=True,
+        nullable=True,
     )
     room_id: Mapped[str] = mapped_column(
         "room_id", UUID(as_uuid=True), ForeignKey("room.id"), index=True, nullable=True
