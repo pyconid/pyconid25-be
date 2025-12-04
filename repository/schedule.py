@@ -21,11 +21,17 @@ def get_all_schedules(
     # Hitung offset (data mulai dari baris ke-berapa)
 
     # Query dasar
-    stmt = select(Schedule).options(
-        joinedload(Schedule.speaker).joinedload(Speaker.user),
-        joinedload(Schedule.speaker).joinedload(Speaker.speaker_type),
-        joinedload(Schedule.room),
-        joinedload(Schedule.schedule_type),
+    stmt = (
+        select(Schedule)
+        .options(
+            joinedload(Schedule.speaker).joinedload(Speaker.user),
+            joinedload(Schedule.speaker).joinedload(Speaker.speaker_type),
+            joinedload(Schedule.room),
+            joinedload(Schedule.schedule_type),
+        )
+        .where(
+            Schedule.deleted_at.is_(None),
+        )
     )
 
     # Jika ada keyword pencarian
@@ -75,11 +81,17 @@ def get_schedule_per_page_by_search(
     offset = (page - 1) * page_size
 
     # Query dasar
-    stmt = select(Schedule).options(
-        joinedload(Schedule.speaker).joinedload(Speaker.user),
-        joinedload(Schedule.speaker).joinedload(Speaker.speaker_type),
-        joinedload(Schedule.room),
-        joinedload(Schedule.schedule_type),
+    stmt = (
+        select(Schedule)
+        .options(
+            joinedload(Schedule.speaker).joinedload(Speaker.user),
+            joinedload(Schedule.speaker).joinedload(Speaker.speaker_type),
+            joinedload(Schedule.room),
+            joinedload(Schedule.schedule_type),
+        )
+        .where(
+            Schedule.deleted_at.is_(None),
+        )
     )
 
     # Jika ada keyword pencarian
@@ -244,7 +256,7 @@ def get_schedule_by_speaker_id(
             joinedload(Schedule.schedule_type),
             joinedload(Schedule.stream),
         )
-        .where(Schedule.speaker_id == speaker_id, Schedule.deleted_at.is_(None))
+        .where(Schedule.speaker_id == speaker_id)
     )
 
     if not include_deleted:
