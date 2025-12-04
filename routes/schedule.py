@@ -253,57 +253,13 @@ async def get_schedule_by_id(
         if not schedule:
             return common_response(NotFound(message="Schedule not found"))
 
-        schedule_dict = PublicScheduleDetail.model_validate(schedule).model_dump(
-            mode="json"
-        )
-
-        if schedule.speaker is not None:
-            # Filter user data based on privacy settings
-            user = schedule.speaker.user
-            user_dict = schedule_dict["speaker"]["user"]
-
-            filtered_user = {
-                "id": user_dict["id"],
-                "username": user_dict["username"],
-                "first_name": user_dict.get("first_name"),
-                "last_name": user_dict.get("last_name"),
-                "bio": user_dict.get("bio"),
-            }
-
-            if user.share_my_email_and_phone_number:
-                filtered_user["email"] = user_dict.get("email")
-                # filtered_user["phone"] = user_dict.get("phone")
-            else:
-                filtered_user["email"] = None
-                # filtered_user["phone"] = None
-
-            if user.share_my_job_and_company:
-                filtered_user["company"] = user_dict.get("company")
-                filtered_user["job_category"] = user_dict.get("job_category")
-                filtered_user["job_title"] = user_dict.get("job_title")
-            else:
-                filtered_user["company"] = None
-                filtered_user["job_category"] = None
-                filtered_user["job_title"] = None
-
-            if user.share_my_public_social_media:
-                filtered_user["website"] = user_dict.get("website")
-                filtered_user["facebook_username"] = user_dict.get("facebook_username")
-                filtered_user["linkedin_username"] = user_dict.get("linkedin_username")
-                filtered_user["twitter_username"] = user_dict.get("twitter_username")
-                filtered_user["instagram_username"] = user_dict.get(
-                    "instagram_username"
+        return common_response(
+            Ok(
+                data=PublicScheduleDetail.model_validate(schedule).model_dump(
+                    mode="json"
                 )
-            else:
-                filtered_user["website"] = None
-                filtered_user["facebook_username"] = None
-                filtered_user["linkedin_username"] = None
-                filtered_user["twitter_username"] = None
-                filtered_user["instagram_username"] = None
-
-            schedule_dict["speaker"]["user"] = filtered_user
-
-        return common_response(Ok(data=schedule_dict))
+            )
+        )
     except Exception as e:
         logger.error(f"Failed to get schedule by id {schedule_id}: {e}")
         return common_response(InternalServerError(error=str(e)))

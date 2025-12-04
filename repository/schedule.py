@@ -9,6 +9,7 @@ from sqlalchemy.sql import exists
 from sqlalchemy.sql.operators import or_
 
 from models.Schedule import Schedule
+from models.Speaker import Speaker
 from schemas.schedule import ScheduleResponseItem
 
 
@@ -21,7 +22,8 @@ def get_all_schedules(
 
     # Query dasar
     stmt = select(Schedule).options(
-        joinedload(Schedule.speaker),
+        joinedload(Schedule.speaker).joinedload(Speaker.user),
+        joinedload(Schedule.speaker).joinedload(Speaker.speaker_type),
         joinedload(Schedule.room),
         joinedload(Schedule.schedule_type),
     )
@@ -74,7 +76,8 @@ def get_schedule_per_page_by_search(
 
     # Query dasar
     stmt = select(Schedule).options(
-        joinedload(Schedule.speaker),
+        joinedload(Schedule.speaker).joinedload(Speaker.user),
+        joinedload(Schedule.speaker).joinedload(Speaker.speaker_type),
         joinedload(Schedule.room),
         joinedload(Schedule.schedule_type),
     )
@@ -129,7 +132,8 @@ def get_schedule_cms(
     stmt = (
         select(Schedule)
         .options(
-            joinedload(Schedule.speaker),
+            joinedload(Schedule.speaker).joinedload(Speaker.user),
+            joinedload(Schedule.speaker).joinedload(Speaker.speaker_type),
             joinedload(Schedule.room),
             joinedload(Schedule.schedule_type),
             joinedload(Schedule.stream),
@@ -213,11 +217,34 @@ def get_schedule_by_id(
     stmt = (
         select(Schedule)
         .options(
-            joinedload(Schedule.speaker),
+            joinedload(Schedule.speaker).joinedload(Speaker.user),
+            joinedload(Schedule.speaker).joinedload(Speaker.speaker_type),
             joinedload(Schedule.room),
             joinedload(Schedule.schedule_type),
+            joinedload(Schedule.stream),
         )
         .where(Schedule.id == schedule_id)
+    )
+
+    if not include_deleted:
+        stmt = stmt.where(Schedule.deleted_at.is_(None))
+
+    return db.execute(stmt).scalar_one_or_none()
+
+
+def get_schedule_by_speaker_id(
+    db: Session, speaker_id: Union[UUID, str], include_deleted: bool = False
+) -> Optional[Schedule]:
+    stmt = (
+        select(Schedule)
+        .options(
+            joinedload(Schedule.speaker).joinedload(Speaker.user),
+            joinedload(Schedule.speaker).joinedload(Speaker.speaker_type),
+            joinedload(Schedule.room),
+            joinedload(Schedule.schedule_type),
+            joinedload(Schedule.stream),
+        )
+        .where(Schedule.speaker_id == speaker_id, Schedule.deleted_at.is_(None))
     )
 
     if not include_deleted:
