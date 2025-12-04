@@ -5,6 +5,7 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from models.Schedule import Schedule
 from models.Stream import Stream, StreamStatus
 
 
@@ -54,7 +55,11 @@ def get_stream_by_mux_asset_id(db: Session, asset_id: str) -> Optional[Stream]:
 def get_stream_by_schedule_id(
     db: Session, schedule_id: Union[UUID, str]
 ) -> Optional[Stream]:
-    stmt = select(Stream).where(Stream.schedule_id == schedule_id)
+    stmt = (
+        select(Stream)
+        .join(Schedule, Schedule.id == Stream.schedule_id)
+        .where(Stream.schedule_id == schedule_id, Schedule.deleted_at.is_(None))
+    )
     return db.execute(stmt).scalar_one_or_none()
 
 
