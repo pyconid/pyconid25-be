@@ -66,12 +66,31 @@ MAIL_TLS = str_to_bool(os.environ.get("MAIL_TLS", "False"))
 MAIL_SSL = str_to_bool(os.environ.get("MAIL_SSL", "True"))
 USE_CREDENTIALS = str_to_bool(os.environ.get("USE_CREDENTIALS", "True"))
 
+# Rate Limiting
+RATE_LIMIT_ENABLED = str_to_bool(os.environ.get("RATE_LIMIT_ENABLED", "False"))
+RATE_LIMIT_PER_MINUTE = int(os.environ.get("RATE_LIMIT_PER_MINUTE", "20"))
+RATE_LIMIT_WINDOW = int(os.environ.get("RATE_LIMIT_WINDOW", "60"))
+RATE_LIMIT_EXCLUDED_PATHS = os.environ.get(
+    "RATE_LIMIT_EXCLUDED_PATHS", "/docs,/openapi.json"
+).split(",")
+
 # Mayar Payment Gateway conf
 MAYAR_API_KEY = os.environ.get("MAYAR_API_KEY", "")
 MAYAR_BASE_URL = os.environ.get("MAYAR_BASE_URL", "https://api.mayar.id")
 MAYAR_WEBHOOK_SECRET = os.environ.get("MAYAR_WEBHOOK_SECRET", "")
 MAYAR_PAYMENT_EXPIRE_HOURS = int(
     os.environ.get("MAYAR_PAYMENT_EXPIRE_HOURS", default="1")
+)
+
+# Mux Streaming conf
+MUX_TOKEN_ID = os.environ.get("MUX_TOKEN_ID", "")
+MUX_TOKEN_SECRET = os.environ.get("MUX_TOKEN_SECRET", "")
+MUX_WEBHOOK_SECRET = os.environ.get("MUX_WEBHOOK_SECRET", "")
+MUX_SIGNING_KEY_ID = os.environ.get("MUX_SIGNING_KEY_ID", "")
+# Base64-encoded private key from Mux Signing Keys
+MUX_SIGNING_KEY_PRIVATE = os.environ.get("MUX_SIGNING_KEY_PRIVATE", "")
+STREAM_TOKEN_EXPIRE_MINUTES = int(
+    os.environ.get("STREAM_TOKEN_EXPIRE_MINUTES", default="15")
 )
 
 # File upload

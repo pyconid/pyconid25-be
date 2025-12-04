@@ -1,20 +1,13 @@
 from datetime import datetime
+from uuid import UUID
+
 from fastapi import APIRouter, Depends
 from fastapi.responses import FileResponse
 from pytz import timezone
-from core.file import get_file
-from core.security import get_current_user
-from models.User import MANAGEMENT_PARTICIPANT, User
-from schemas.speaker import (
-    CreateSpeakerRequest,
-    CreateSpeakerResponse,
-    SpeakerDetailResponse,
-    SpeakerQuery,
-    SpeakerResponse,
-    UpdateSpeakerRequest,
-    UpdateSpeakerResponse,
-)
 from sqlalchemy.orm import Session
+
+from core.file import get_file
+from core.log import logger
 from core.responses import (
     BadRequest,
     Forbidden,
@@ -25,7 +18,13 @@ from core.responses import (
     Unauthorized,
     common_response,
 )
+from core.security import get_current_user
 from models import get_db_sync
+from models.User import MANAGEMENT_PARTICIPANT, User
+from repository import schedule as scheduleRepo
+from repository import speaker as speakerRepo
+from repository import speaker_type as speakerTypeRepo
+from repository import user as userRepo
 from schemas.common import (
     BadRequestResponse,
     ForbiddenResponse,
@@ -34,9 +33,17 @@ from schemas.common import (
     NotFoundResponse,
     UnauthorizedResponse,
 )
-from repository import speaker as speakerRepo
-from repository import speaker_type as speakerTypeRepo
-from repository import user as userRepo
+from schemas.schedule import PublicScheduleDetail, PublicSpeakerInfo
+from schemas.speaker import (
+    AllSpeakerResponse,
+    CreateSpeakerRequest,
+    CreateSpeakerResponse,
+    SpeakerDetailResponse,
+    SpeakerQuery,
+    SpeakerResponse,
+    UpdateSpeakerRequest,
+    UpdateSpeakerResponse,
+)
 
 router = APIRouter(prefix="/speaker", tags=["Speaker"])
 
@@ -71,6 +78,31 @@ async def get_speaker(
 
 
 @router.get(
+    "/public",
+    responses={
+        "200": {"model": AllSpeakerResponse},
+        "500": {"model": InternalServerErrorResponse},
+    },
+)
+async def get_speaker_public(db: Session = Depends(get_db_sync)):
+    try:
+        speakers = speakerRepo.get_all_speakers_public(db=db)
+
+        speaker_schemas: list[PublicSpeakerInfo] = [
+            PublicSpeakerInfo.model_validate(s) for s in speakers
+        ]
+
+        return common_response(
+            Ok(data=AllSpeakerResponse(results=speaker_schemas).model_dump(mode="json"))
+        )
+    except Exception as e:
+        import traceback
+
+        traceback.print_exc()
+        return common_response(InternalServerError(error=str(e)))
+
+
+@router.get(
     "/{id}",
     responses={
         "200": {"model": SpeakerDetailResponse},
@@ -91,7 +123,7 @@ async def get_speaker_by_id(
 
     data = speakerRepo.get_speaker_by_id(db=db, id=id)
     if data is None:
-        return common_response(NotFound(error=f"Speaker with {id} not found"))
+        return common_response(NotFound(message=f"Speaker with {id} not found"))
 
     return common_response(
         Ok(
@@ -117,6 +149,38 @@ async def get_speaker_by_id(
             ).model_dump()
         )
     )
+
+
+@router.get(
+    "/{id}/schedule/",
+    responses={
+        "200": {"model": PublicScheduleDetail},
+        "404": {"model": NotFoundResponse},
+        "500": {"model": InternalServerErrorResponse},
+    },
+)
+async def get_schedule_by_speaker(
+    id: UUID,
+    db: Session = Depends(get_db_sync),
+):
+    try:
+        schedule = scheduleRepo.get_schedule_by_speaker_id(db, id)
+        if not schedule:
+            return common_response(NotFound(message="Speaker schedule not found"))
+
+        return common_response(
+            Ok(
+                data=PublicScheduleDetail.model_validate(schedule).model_dump(
+                    mode="json"
+                )
+            )
+        )
+    except Exception as e:
+        import traceback
+
+        traceback.print_exc()
+        logger.error(f"Failed to get schedule by id {id}: {e}")
+        return common_response(InternalServerError(error=str(e)))
 
 
 @router.post(
@@ -297,7 +361,7 @@ async def get_speaker_profile_picture(id: str, db: Session = Depends(get_db_sync
     photo = get_file(path=data.user.profile_picture)
     if photo is None:
         return common_response(
-            NotFound(error=f"Profile picture file for speaker with {id} not found")
+            NotFound(message=f"Profile picture file for speaker with {id} not found")
         )
 
     return photo

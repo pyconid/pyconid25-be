@@ -1,8 +1,10 @@
 from datetime import datetime
-from typing import Literal, Optional
+from typing import List, Literal, Optional
+
 from pytz import timezone
-from sqlalchemy import select, func
-from sqlalchemy.orm import Session
+from sqlalchemy import func, select
+from sqlalchemy.orm import Session, joinedload
+
 from models.Speaker import Speaker
 from models.SpeakerType import SpeakerType
 from models.User import User
@@ -88,6 +90,20 @@ def get_speaker_per_page_by_search(
         "page_count": page_count,  # page_count,
         "results": results_schema,
     }
+
+
+def get_all_speakers_public(db: Session) -> List[Speaker]:
+    stmt = (
+        select(Speaker)
+        .options(
+            joinedload(Speaker.user),
+            joinedload(Speaker.speaker_type),
+        )
+        .order_by(Speaker.speaker_type_id)
+    )
+
+    results = db.scalars(stmt).all()
+    return results
 
 
 def get_speaker_by_id(db: Session, id: str) -> Optional[Speaker]:
