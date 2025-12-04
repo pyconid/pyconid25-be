@@ -185,6 +185,9 @@ async def get_schedule_cms(
         if current_user is None:
             return common_response(Unauthorized(message="Unauthorized"))
 
+        if current_user.participant_type != MANAGEMENT_PARTICIPANT:
+            return common_response(Forbidden())
+
         data, num_data, num_page = scheduleRepo.get_schedule_cms(
             db=db,
             page=query.page,
