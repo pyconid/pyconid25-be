@@ -1,26 +1,28 @@
-from sqlalchemy.orm import Session
-from typing import Optional, Tuple
 from datetime import datetime, timedelta
+from typing import Optional, Tuple
+
+import bcrypt
+import jwt
+import pytz
 from fastapi import Depends
 from fastapi.security import OAuth2PasswordBearer
-import bcrypt
 from pytz import timezone
-import pytz
 from sqlalchemy import delete, or_, select
+from sqlalchemy.orm import Session
 from sqlalchemy.orm import Session as SQLAlchemySession
+
 from models import get_db_sync
 from models.RefreshToken import RefreshToken
 from models.Token import Token
-import jwt
 from models.User import User
+from schemas.auth import AuthorizationStatusEnum
 from settings import (
     ACCESS_TOKEN_EXPIRE_MINUTES,
+    ALGORITHM,
     REFRESH_TOKEN_EXPIRE_MINUTES,
     SECRET_KEY,
-    ALGORITHM,
     TZ,
 )
-
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/token/", auto_error=False)
 
@@ -110,3 +112,20 @@ def invalidate_token(db: SQLAlchemySession, token: str):
     stmt = delete(Token).where(or_(Token.expired_at <= now, Token.token == token))
     db.execute(stmt)
     db.commit()
+
+
+def check_permissions(
+    current_user: User | None, required_participant_type: str
+) -> AuthorizationStatusEnum:
+    """Check if the current user has the required permissions.
+    Args:
+        current_user (User | None): The current authenticated user.
+        required_participant_type (str): The required participant type for access.
+    Returns:
+        AuthorizationStatusEnum: The authorization status.
+    """
+    if current_user is None:
+        return AuthorizationStatusEnum.UNAUTHORIZED
+    if current_user.participant_type != required_participant_type:
+        return AuthorizationStatusEnum.FORBIDDEN
+    return AuthorizationStatusEnum.PASSED
