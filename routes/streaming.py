@@ -1,14 +1,13 @@
-from core.responses import handle_http_exception
-import traceback
-from core.log import logger
-from datetime import datetime
 import json
+import traceback
+from datetime import datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pytz import timezone
 from sqlalchemy.orm import Session
 
+from core.log import logger
 from core.mux_service import mux_service
 from core.responses import (
     BadRequest,
@@ -17,6 +16,7 @@ from core.responses import (
     Ok,
     Unauthorized,
     common_response,
+    handle_http_exception,
 )
 from core.security import get_user_from_token, oauth2_scheme
 from models import get_db_sync
@@ -70,14 +70,14 @@ async def get_stream_playback(
         if stream_asset.schedule.deleted_at:
             return common_response(NotFound(message="Stream not found"))
 
-        if stream_asset.status not in [
-            StreamStatus.READY.value,
-            StreamStatus.STREAMING.value,
-            StreamStatus.ENDED.value,
-        ]:
-            return common_response(
-                BadRequest(message="Stream is not ready for playback")
-            )
+        # if stream_asset.status not in [
+        #     StreamStatus.READY.value,
+        #     StreamStatus.STREAMING.value,
+        #     StreamStatus.ENDED.value,
+        # ]:
+        #     return common_response(
+        #         BadRequest(message="Stream is not ready for playback")
+        #     )
 
         # Use asset playback ID for ended streams (replay/recording)
         # Use live stream playback ID for active/streaming streams
