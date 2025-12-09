@@ -132,7 +132,7 @@ class TestCheckIn(IsolatedAsyncioTestCase):
     def test_get_user_data_by_payment_id_invalid(self):
         """Test response when payment ID format is invalid"""
         response = self.client.get("/ticket/checkin/invalid-uuid-format")
-        self.assertIn(response.status_code, [404, 500])
+        self.assertEqual(response.status_code, 404)
 
     def test_get_user_data_with_no_tshirt_size(self):
         """Test retrieval when user has no t-shirt size set"""
