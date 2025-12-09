@@ -16,7 +16,10 @@ class CheckinUserResponse(BaseModel):
     checked_in_day1: bool = False
     checked_in_day2: bool = False
 
-
+class CheckinUserResponseSchema(BaseModel):
+    data: CheckinUserResponse
+    message: str = "User check-in data retrieved successfully"
+    
 def user_model_to_checkin_response(user: User) -> CheckinUserResponse:
     """Convert User model to CheckinUserResponse schema
 
