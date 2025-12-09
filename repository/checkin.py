@@ -106,6 +106,3 @@ def set_user_checkin_status(
         logger.error(f"Error setting check-in status: {e}")
         db.rollback()
         return None
-
-
-

@@ -160,7 +160,6 @@ async def checkin(payment_id: str, db: Session = Depends(get_db_sync)):
         CheckinUserResponse: User check-in data
     """
     try:
-        
         result = get_user_data_by_payment_id(db, payment_id)
         if result is None:
             return common_response(
