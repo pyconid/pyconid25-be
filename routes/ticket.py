@@ -1,5 +1,4 @@
 import traceback
-
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
@@ -25,7 +24,7 @@ from repository.checkin import (
 from repository.ticket import get_active_tickets
 from schemas.checkin import (
     CheckinUserRequest,
-    CheckinUserResponse,
+    CheckinUserResponseSchema,
     user_model_to_checkin_response,
 )
 from schemas.common import (
@@ -145,7 +144,7 @@ async def get_my_ticket(
 @router.get(
     "/checkin/{payment_id}",
     responses={
-        "200": {"model": CheckinUserResponse},
+        "200": {"model": CheckinUserResponseSchema},
         "404": {"model": NotFoundResponse},
         "500": {"model": InternalServerErrorResponse},
     },
@@ -192,7 +191,7 @@ async def checkin(payment_id: str, db: Session = Depends(get_db_sync)):
 @router.patch(
     "/checkin",
     responses={
-        "200": {"model": CheckinUserResponse},
+        "200": {"model": CheckinUserResponseSchema},
         "401": {"model": UnauthorizedResponse},
         "402": {"model": PaymentRequiredResponse},
         "404": {"model": NotFoundResponse},
@@ -259,7 +258,7 @@ async def checkin_user(
 @router.patch(
     "/checkin/reset",
     responses={
-        "200": {"model": CheckinUserResponse},
+        "200": {"model": CheckinUserResponseSchema},
         "401": {"model": UnauthorizedResponse},
         "402": {"model": PaymentRequiredResponse},
         "404": {"model": NotFoundResponse},

@@ -1,6 +1,6 @@
 import datetime
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
-
+from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from core.log import logger
@@ -21,6 +21,10 @@ def get_user_data_by_payment_id(db: Session, payment_id: str) -> User | None:
     Returns:
         User | None: User data or None if not found
     """
+    try:
+        UUID(payment_id)
+    except ValueError:
+        return None
     query = (
         select(User)
         .join(Payment, Payment.user_id == User.id)
