@@ -60,7 +60,9 @@ async def get_speaker(
 ):
     try:
         if query.all:
-            data = speakerRepo.get_all_speakers(db=db, order_dir=query.order_dir)
+            data = speakerRepo.get_all_speakers(
+                db=db, search=query.search, order_dir=query.order_dir
+            )
         else:
             data = speakerRepo.get_speaker_per_page_by_search(
                 db=db,
