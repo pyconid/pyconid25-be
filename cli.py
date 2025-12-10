@@ -79,5 +79,14 @@ def clear_location_data():
         clear_data_location(db=session, is_commit=True)
 
 
+@app.command()
+def checkin_example_data():
+    from models import factory_session
+    from seeders.initial_checkin_data import initialize_checkin_data
+
+    with factory_session() as session:
+        initialize_checkin_data(db=session)
+
+
 if __name__ == "__main__":
     app()

@@ -11,7 +11,11 @@ from models.User import User
 from schemas.speaker import SpeakerResponseItem
 
 
-def get_all_speakers(db: Session, order_dir: Literal["asc", "desc"] = "asc"):
+def get_all_speakers(
+    db: Session,
+    order_dir: Literal["asc", "desc"] = "asc",
+    search: Optional[str] = None,
+):
     # Query dasar
     stmt = select(Speaker)
 
@@ -20,6 +24,15 @@ def get_all_speakers(db: Session, order_dir: Literal["asc", "desc"] = "asc"):
         stmt = stmt.order_by(Speaker.updated_at.asc())
     else:
         stmt = stmt.order_by(Speaker.updated_at.desc())
+
+    if search:
+        search_pattern = f"%{search}%"
+        stmt = stmt.join(User, Speaker.user).where(
+            (User.username.ilike(search_pattern))
+            | (User.first_name.ilike(search_pattern))
+            | (User.last_name.ilike(search_pattern))
+            | (User.email.ilike(search_pattern))
+        )
 
     # Tambahkan pagination (offset + limit)
     # Hitung total data sebelum pagination
