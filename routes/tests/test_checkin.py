@@ -14,7 +14,7 @@ from models import db, engine, get_db_sync, get_db_sync_for_test
 from models.Payment import Payment, PaymentStatus
 from models.Ticket import Ticket
 from models.Token import Token
-from models.User import User
+from models.User import MANAGEMENT_PARTICIPANT, VOLUNTEER_PARTICIPANT, User
 from schemas.checkin import CheckinDayEnum
 from settings import ACCESS_TOKEN_EXPIRE_MINUTES, ALGORITHM, SECRET_KEY, TZ
 
@@ -46,8 +46,25 @@ class TestCheckIn(IsolatedAsyncioTestCase):
         self.db.add(self.test_user)
         self.db.commit()
 
-        # Create staff user for check-in
-        self.staff_user = User(
+        # Create test token manually for management user
+        expire = datetime.now(tz=timezone(TZ)) + timedelta(
+            minutes=float(ACCESS_TOKEN_EXPIRE_MINUTES)
+        )
+        payload = {
+            "id": str(self.test_user.id),
+            "username": self.test_user.username,
+            "exp": expire,
+        }
+        token_str = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+        test_token_model = Token(
+            user_id=self.test_user.id, token=token_str, expired_at=expire
+        )
+        self.db.add(test_token_model)
+        self.db.commit()
+        self.test_user_token = token_str
+
+        # Create managemnt user for check-in
+        self.management_user = User(
             username="staffuser",
             email="staff@example.com",
             phone="+628123456790",
@@ -55,26 +72,58 @@ class TestCheckIn(IsolatedAsyncioTestCase):
             last_name="user",
             password=generate_hash_password("password"),
             is_active=True,
+            participant_type=MANAGEMENT_PARTICIPANT,
         )
-        self.db.add(self.staff_user)
+        self.db.add(self.management_user)
         self.db.commit()
 
-        # Create test token manually for staff user
+        # Create test token manually for management user
         expire = datetime.now(tz=timezone(TZ)) + timedelta(
             minutes=float(ACCESS_TOKEN_EXPIRE_MINUTES)
         )
         payload = {
-            "id": str(self.staff_user.id),
-            "username": self.staff_user.username,
+            "id": str(self.management_user.id),
+            "username": self.management_user.username,
             "exp": expire,
         }
         token_str = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
         test_token_model = Token(
-            user_id=self.staff_user.id, token=token_str, expired_at=expire
+            user_id=self.management_user.id, token=token_str, expired_at=expire
         )
         self.db.add(test_token_model)
         self.db.commit()
-        self.staff_token = token_str
+        self.management_token = token_str
+
+        # Create volunteer user for check-in
+        self.volunteer_user = User(
+            username="staffuser-volunteer",
+            email="staff-volunteer@example.com",
+            phone="+628123456790",
+            first_name="volunteer",
+            last_name="user",
+            password=generate_hash_password("password"),
+            is_active=True,
+            participant_type=VOLUNTEER_PARTICIPANT,
+        )
+        self.db.add(self.volunteer_user)
+        self.db.commit()
+
+        # Create test token manually for management user
+        expire = datetime.now(tz=timezone(TZ)) + timedelta(
+            minutes=float(ACCESS_TOKEN_EXPIRE_MINUTES)
+        )
+        payload = {
+            "id": str(self.volunteer_user.id),
+            "username": self.volunteer_user.username,
+            "exp": expire,
+        }
+        token_str = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+        test_token_model = Token(
+            user_id=self.volunteer_user.id, token=token_str, expired_at=expire
+        )
+        self.db.add(test_token_model)
+        self.db.commit()
+        self.volunteer_token = token_str
 
         # Create test ticket
         self.test_ticket = Ticket(
@@ -227,7 +276,7 @@ class TestCheckIn(IsolatedAsyncioTestCase):
                 "payment_id": str(self.test_payment.id),
                 "day": CheckinDayEnum.day1.value,
             },
-            headers={"Authorization": f"Bearer {self.staff_token}"},
+            headers={"Authorization": f"Bearer {self.management_token}"},
         )
         self.assertEqual(response.status_code, 200)
         data = response.json()
@@ -244,7 +293,7 @@ class TestCheckIn(IsolatedAsyncioTestCase):
                 "payment_id": str(self.test_payment.id),
                 "day": CheckinDayEnum.day2.value,
             },
-            headers={"Authorization": f"Bearer {self.staff_token}"},
+            headers={"Authorization": f"Bearer {self.management_token}"},
         )
         self.assertEqual(response.status_code, 200)
         data = response.json()
@@ -271,7 +320,7 @@ class TestCheckIn(IsolatedAsyncioTestCase):
                 "payment_id": str(non_existent_id),
                 "day": CheckinDayEnum.day1.value,
             },
-            headers={"Authorization": f"Bearer {self.staff_token}"},
+            headers={"Authorization": f"Bearer {self.management_token}"},
         )
         self.assertEqual(response.status_code, 404)
         data = response.json()
@@ -301,7 +350,7 @@ class TestCheckIn(IsolatedAsyncioTestCase):
                 "payment_id": str(unpaid_payment.id),
                 "day": CheckinDayEnum.day1.value,
             },
-            headers={"Authorization": f"Bearer {self.staff_token}"},
+            headers={"Authorization": f"Bearer {self.management_token}"},
         )
         self.assertEqual(response.status_code, 402)
         data = response.json()
@@ -315,7 +364,7 @@ class TestCheckIn(IsolatedAsyncioTestCase):
                 "payment_id": str(self.test_payment.id),
                 "day": CheckinDayEnum.day1.value,
             },
-            headers={"Authorization": f"Bearer {self.staff_token}"},
+            headers={"Authorization": f"Bearer {self.management_token}"},
         )
         self.assertEqual(response.status_code, 200)
 
@@ -323,7 +372,9 @@ class TestCheckIn(IsolatedAsyncioTestCase):
         self.db.refresh(self.test_user)
         self.assertTrue(self.test_user.attendance_day_1)
         self.assertIsNotNone(self.test_user.attendance_day_1_at)
-        self.assertEqual(self.test_user.attendance_day_1_updated_by, self.staff_user.id)
+        self.assertEqual(
+            self.test_user.attendance_day_1_updated_by, self.management_user.id
+        )
 
     def test_checkin_multiple_days(self):
         """Test check-in for both days"""
@@ -334,7 +385,7 @@ class TestCheckIn(IsolatedAsyncioTestCase):
                 "payment_id": str(self.test_payment.id),
                 "day": CheckinDayEnum.day1.value,
             },
-            headers={"Authorization": f"Bearer {self.staff_token}"},
+            headers={"Authorization": f"Bearer {self.management_token}"},
         )
         self.assertEqual(response1.status_code, 200)
 
@@ -345,7 +396,7 @@ class TestCheckIn(IsolatedAsyncioTestCase):
                 "payment_id": str(self.test_payment.id),
                 "day": CheckinDayEnum.day2.value,
             },
-            headers={"Authorization": f"Bearer {self.staff_token}"},
+            headers={"Authorization": f"Bearer {self.management_token}"},
         )
         self.assertEqual(response2.status_code, 200)
 
@@ -364,7 +415,7 @@ class TestCheckIn(IsolatedAsyncioTestCase):
                 "payment_id": str(self.test_payment.id),
                 "day": CheckinDayEnum.day1.value,
             },
-            headers={"Authorization": f"Bearer {self.staff_token}"},
+            headers={"Authorization": f"Bearer {self.management_token}"},
         )
 
         # Then reset
@@ -374,7 +425,7 @@ class TestCheckIn(IsolatedAsyncioTestCase):
                 "payment_id": str(self.test_payment.id),
                 "day": CheckinDayEnum.day1.value,
             },
-            headers={"Authorization": f"Bearer {self.staff_token}"},
+            headers={"Authorization": f"Bearer {self.management_token}"},
         )
         self.assertEqual(response.status_code, 200)
         data = response.json()
@@ -391,7 +442,7 @@ class TestCheckIn(IsolatedAsyncioTestCase):
                 "payment_id": str(self.test_payment.id),
                 "day": CheckinDayEnum.day2.value,
             },
-            headers={"Authorization": f"Bearer {self.staff_token}"},
+            headers={"Authorization": f"Bearer {self.management_token}"},
         )
 
         # Then reset
@@ -401,7 +452,7 @@ class TestCheckIn(IsolatedAsyncioTestCase):
                 "payment_id": str(self.test_payment.id),
                 "day": CheckinDayEnum.day2.value,
             },
-            headers={"Authorization": f"Bearer {self.staff_token}"},
+            headers={"Authorization": f"Bearer {self.management_token}"},
         )
         self.assertEqual(response.status_code, 200)
         data = response.json()
@@ -427,7 +478,7 @@ class TestCheckIn(IsolatedAsyncioTestCase):
                 "payment_id": str(non_existent_id),
                 "day": CheckinDayEnum.day1.value,
             },
-            headers={"Authorization": f"Bearer {self.staff_token}"},
+            headers={"Authorization": f"Bearer {self.management_token}"},
         )
         self.assertEqual(response.status_code, 404)
         data = response.json()
@@ -442,7 +493,7 @@ class TestCheckIn(IsolatedAsyncioTestCase):
                 "payment_id": str(self.test_payment.id),
                 "day": CheckinDayEnum.day1.value,
             },
-            headers={"Authorization": f"Bearer {self.staff_token}"},
+            headers={"Authorization": f"Bearer {self.management_token}"},
         )
         self.assertEqual(response.status_code, 200)
         data = response.json()
@@ -457,7 +508,7 @@ class TestCheckIn(IsolatedAsyncioTestCase):
                 "payment_id": str(self.test_payment.id),
                 "day": CheckinDayEnum.day1.value,
             },
-            headers={"Authorization": f"Bearer {self.staff_token}"},
+            headers={"Authorization": f"Bearer {self.management_token}"},
         )
         self.client.patch(
             "/ticket/checkin",
@@ -465,7 +516,7 @@ class TestCheckIn(IsolatedAsyncioTestCase):
                 "payment_id": str(self.test_payment.id),
                 "day": CheckinDayEnum.day2.value,
             },
-            headers={"Authorization": f"Bearer {self.staff_token}"},
+            headers={"Authorization": f"Bearer {self.management_token}"},
         )
 
         # Reset day 1
@@ -475,7 +526,7 @@ class TestCheckIn(IsolatedAsyncioTestCase):
                 "payment_id": str(self.test_payment.id),
                 "day": CheckinDayEnum.day1.value,
             },
-            headers={"Authorization": f"Bearer {self.staff_token}"},
+            headers={"Authorization": f"Bearer {self.management_token}"},
         )
         self.assertEqual(response.status_code, 200)
         data = response.json()
@@ -490,10 +541,34 @@ class TestCheckIn(IsolatedAsyncioTestCase):
                 "payment_id": str(self.test_payment.id),
                 "day": CheckinDayEnum.day1.value,
             },
-            headers={"Authorization": f"Bearer {self.staff_token}"},
+            headers={"Authorization": f"Bearer {self.management_token}"},
         )
         self.assertEqual(response.status_code, 200)
 
         # Verify staff user is recorded
         self.db.refresh(self.test_user)
-        self.assertEqual(self.test_user.attendance_day_1_updated_by, self.staff_user.id)
+        self.assertEqual(
+            self.test_user.attendance_day_1_updated_by, self.management_user.id
+        )
+
+    def test_checkin_updates_forbidden_user(self):
+        response = self.client.patch(
+            "/ticket/checkin",
+            json={
+                "payment_id": str(self.test_payment.id),
+                "day": CheckinDayEnum.day1.value,
+            },
+            headers={"Authorization": f"Bearer {self.test_user_token}"},
+        )
+        self.assertEqual(response.status_code, 403)
+
+    def test_reset_checkin_forbidden_user(self):
+        response = self.client.patch(
+            "/ticket/checkin/reset",
+            json={
+                "payment_id": str(self.test_payment.id),
+                "day": CheckinDayEnum.day1.value,
+            },
+            headers={"Authorization": f"Bearer {self.test_user_token}"},
+        )
+        self.assertEqual(response.status_code, 403)

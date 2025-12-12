@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from core.log import logger
 from core.responses import (
+    Forbidden,
     InternalServerError,
     NotFound,
     Ok,
@@ -16,6 +17,7 @@ from core.responses import (
 from core.security import get_user_from_token, oauth2_scheme
 from models import get_db_sync
 from models.Payment import PaymentStatus
+from models.User import MANAGEMENT_PARTICIPANT, VOLUNTEER_PARTICIPANT
 from repository import payment as paymentRepo
 from repository.checkin import (
     get_user_and_payment_by_payment_id,
@@ -44,6 +46,7 @@ from schemas.ticket import (
     TicketResponse,
     UserInfo,
 )
+from schemas.user_profile import ParticipantType
 
 router = APIRouter(prefix="/ticket", tags=["Ticket"])
 
@@ -212,6 +215,16 @@ async def checkin_user(
             logger.error("Unauthorized check-in attempt")
             return common_response(Unauthorized(message="Unauthorized"))
 
+        if checkin_staff_user.participant_type not in [
+            MANAGEMENT_PARTICIPANT,
+            VOLUNTEER_PARTICIPANT,
+            ParticipantType.ORGANIZER,
+        ]:
+            logger.error(
+                f"User {checkin_staff_user.id} with participant type {checkin_staff_user.participant_type} is not authorized to perform check-ins"
+            )
+            return common_response(Forbidden())
+
         user_and_payment = get_user_and_payment_by_payment_id(db, payload.payment_id)
         if user_and_payment is None:
             return common_response(
@@ -278,6 +291,16 @@ async def checkin_user_reset(
         if checkin_staff_user is None:
             logger.error("Unauthorized check-in reset attempt")
             return common_response(Unauthorized(message="Unauthorized"))
+
+        if checkin_staff_user.participant_type not in [
+            MANAGEMENT_PARTICIPANT,
+            VOLUNTEER_PARTICIPANT,
+            ParticipantType.ORGANIZER,
+        ]:
+            logger.error(
+                f"User {checkin_staff_user.id} with participant type {checkin_staff_user.participant_type} is not authorized to perform check-ins"
+            )
+            return common_response(Forbidden())
 
         user = get_user_data_by_payment_id(db, payload.payment_id)
         if user is None:
