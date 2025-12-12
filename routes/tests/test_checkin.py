@@ -125,6 +125,37 @@ class TestCheckIn(IsolatedAsyncioTestCase):
         self.db.commit()
         self.volunteer_token = token_str
 
+        # Create organizer user for check-in
+        self.organizer_user = User(
+            username="staffuser-organizer",
+            email="staff-organizer@example.com",
+            phone="+628123456790",
+            first_name="organizer",
+            last_name="user",
+            password=generate_hash_password("password"),
+            is_active=True,
+            participant_type=ParticipantType.ORGANIZER,
+        )
+        self.db.add(self.organizer_user)
+        self.db.commit()
+
+        # Create test token manually for management user
+        expire = datetime.now(tz=timezone(TZ)) + timedelta(
+            minutes=float(ACCESS_TOKEN_EXPIRE_MINUTES)
+        )
+        payload = {
+            "id": str(self.organizer_user.id),
+            "username": self.organizer_user.username,
+            "exp": expire,
+        }
+        token_str = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+        test_token_model = Token(
+            user_id=self.organizer_user.id, token=token_str, expired_at=expire
+        )
+        self.db.add(test_token_model)
+        self.db.commit()
+        self.organizer_token = token_str
+
         # Create test ticket
         self.test_ticket = Ticket(
             id=uuid.uuid4(),
@@ -550,6 +581,50 @@ class TestCheckIn(IsolatedAsyncioTestCase):
         self.assertEqual(
             self.test_user.attendance_day_1_updated_by, self.management_user.id
         )
+
+    def test_checkin_updates_volunteer_user(self):
+        response = self.client.patch(
+            "/ticket/checkin",
+            json={
+                "payment_id": str(self.test_payment.id),
+                "day": CheckinDayEnum.day1.value,
+            },
+            headers={"Authorization": f"Bearer {self.volunteer_token}"},
+        )
+        self.assertEqual(response.status_code, 200)
+
+    def test_reset_checkin_volunteer_user(self):
+        response = self.client.patch(
+            "/ticket/checkin/reset",
+            json={
+                "payment_id": str(self.test_payment.id),
+                "day": CheckinDayEnum.day1.value,
+            },
+            headers={"Authorization": f"Bearer {self.volunteer_token}"},
+        )
+        self.assertEqual(response.status_code, 200)
+
+    def test_checkin_updates_organizer_user(self):
+        response = self.client.patch(
+            "/ticket/checkin",
+            json={
+                "payment_id": str(self.test_payment.id),
+                "day": CheckinDayEnum.day1.value,
+            },
+            headers={"Authorization": f"Bearer {self.organizer_token}"},
+        )
+        self.assertEqual(response.status_code, 200)
+
+    def test_reset_checkin_organizer_user(self):
+        response = self.client.patch(
+            "/ticket/checkin/reset",
+            json={
+                "payment_id": str(self.test_payment.id),
+                "day": CheckinDayEnum.day1.value,
+            },
+            headers={"Authorization": f"Bearer {self.organizer_token}"},
+        )
+        self.assertEqual(response.status_code, 200)
 
     def test_checkin_updates_forbidden_user(self):
         response = self.client.patch(
