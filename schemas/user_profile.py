@@ -1,5 +1,5 @@
 import re
-from datetime import date
+from datetime import date, datetime
 from enum import Enum
 from typing import Optional, List, Any
 
@@ -235,6 +235,12 @@ class UserProfilePrivate(UserProfilePublic):
     linkedin_username: str | None
     twitter_username: str | None
     instagram_username: str | None
+
+    # Attendance
+    attendance_day_1: Optional[bool] = None
+    attendance_day_1_at: Optional[datetime] = None
+    attendance_day_2: Optional[bool] = None
+    attendance_day_2_at: Optional[datetime] = None
 
     @model_validator(mode="before")
     @classmethod
