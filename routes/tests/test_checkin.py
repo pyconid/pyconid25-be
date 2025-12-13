@@ -42,7 +42,7 @@ class TestCheckIn(IsolatedAsyncioTestCase):
             last_name="user",
             password=generate_hash_password("password"),
             is_active=True,
-            participant_type="Student"
+            participant_type="Student",
         )
         self.db.add(self.test_user)
         self.db.commit()
