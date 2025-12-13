@@ -2,7 +2,6 @@ from typing import Optional
 from enum import Enum
 from core.log import logger
 from pydantic import BaseModel, EmailStr, Field
-from schemas.user_profile import ParticipantType, TShirtSize
 from models.User import User
 
 
@@ -11,8 +10,8 @@ class CheckinUserResponse(BaseModel):
     email: Optional[EmailStr] = None
     first_name: Optional[str] = None
     last_name: Optional[str] = None
-    t_shirt_size: Optional[TShirtSize] = None
-    participant_type: Optional[ParticipantType] = None
+    t_shirt_size: Optional[str] = None
+    participant_type: Optional[str] = None
     checked_in_day1: bool = False
     checked_in_day2: bool = False
 
