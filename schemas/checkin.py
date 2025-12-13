@@ -34,10 +34,8 @@ def user_model_to_checkin_response(user: User) -> CheckinUserResponse:
     tshirt_size = None
     participant_type = None
     try:
-        tshirt_size = TShirtSize(user.t_shirt_size) if user.t_shirt_size else None
-        participant_type = (
-            ParticipantType(user.participant_type) if user.participant_type else None
-        )
+        tshirt_size = user.t_shirt_size
+        participant_type = user.participant_type
     except ValueError as e:
         logger.error(f"Invalid enum value in user model: {e}")
 
